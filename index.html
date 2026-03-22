@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Romi Nexus | Commercial Dashboard — Timothy Mawonera</title>
+  <meta name="robots" content="noindex,nofollow">
+  <!--
+    ROMI NEXUS — TIMOTHY MAWONERA CCO DASHBOARD v1.0
+    ==================================================
+    Role: Fractional Chief Commercial Officer
+    KPI: 3 qualifying introductions per quarter (FCCO §3.5)
+    Commission: 18% on attributable closed deals (FCCO §8)
+    Agreement: v4.6 — DIFC jurisdiction
+    ==================================================
+    SECURITY:
+    - OWASP A03: All user-visible strings via textContent, never innerHTML
+    - OWASP A07: Session token in sessionStorage only
+    - OWASP A01: Auth gated; role enforced server-side
+    - OWASP A05: CSP meta tag enforced
+    - Input sanitization on all fields before storage/display
+    - Attribution email timestamps are the commission protection mechanism
+  -->
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://rominexus-proxy.vacorp-inquiries.workers.dev https://script.google.com https://script.googleusercontent.com; img-src 'self' data:; frame-ancestors 'none';">
+  <!-- frame-ancestors 'none' = clickjacking protection -->
+
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+
+  <style>
+    :root {
+      --gold:         #D4AF37;
+      --gold-dim:     #a8892a;
+      --gold-hover:   #b5952f;
+      --bg:           #020202;
+      --bg-panel:     #080808;
+      --bg-card:      #0d0d0d;
+      --border:       #1a1a1a;
+      --border-bright:#2a2a2a;
+      --text:         #e8e8e8;
+      --text-muted:   #555;
+      --text-dim:     #333;
+      --success:      #00e676;
+      --warning:      #ffab00;
+      --danger:       #ff1744;
+      --info:         #2979ff;
+      --mono:         'IBM Plex Mono', monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;min-height:100vh;overflow-x:hidden;}
+
+
+    /* ── TOP BAR ── */
+    .top-bar{
+      background:#000;border-bottom:1px solid var(--gold);
+      height:42px;display:flex;align-items:center;justify-content:space-between;
+      padding:0 20px;position:sticky;top:0;z-index:1000;
+    }
+    .top-bar-logo{font-size:13px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;}
+    .top-bar-role{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;}
+    .top-bar-right{display:flex;align-items:center;gap:16px;}
+    #clock{font-size:10px;color:var(--text-muted);letter-spacing:1px;}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);animation:pulse 2s infinite;flex-shrink:0;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+    .logout-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-muted);font-family:var(--mono);font-size:9px;padding:5px 12px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:.2s;}
+    .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+
+    /* ── AUTH OVERLAY ── */
+    #authOverlay{position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;}
+    .auth-box{background:var(--bg-panel);border:1px solid var(--border-bright);border-top:2px solid var(--gold);width:360px;padding:32px;}
+    .auth-logo{font-size:18px;font-weight:700;color:var(--gold);letter-spacing:4px;margin-bottom:4px;}
+    .auth-sub{font-size:9px;color:var(--text-muted);letter-spacing:2px;margin-bottom:28px;}
+    .auth-label{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+    .auth-input{width:100%;background:var(--bg);border:1px solid var(--border-bright);color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 12px;outline:none;transition:.2s;}
+    .auth-input:focus{border-color:var(--gold);}
+    .auth-btn{width:100%;background:var(--gold);color:#000;border:none;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:12px;cursor:pointer;transition:.2s;margin-top:16px;}
+    .auth-btn:hover{background:var(--gold-hover);}
+    .auth-btn:disabled{background:var(--text-dim);cursor:not-allowed;}
+    .auth-msg{font-size:10px;margin-top:10px;min-height:18px;text-align:center;}
+    .auth-msg.err{color:var(--danger);}
+    .auth-msg.ok{color:var(--success);}
+    .auth-msg.info{color:var(--warning);}
+    .auth-step{display:none;}
+    .auth-step.active{display:block;}
+
+
+    /* ── MAIN ── */
+    #appShell{display:none;}
+    .dash-wrap{max-width:1280px;margin:0 auto;padding:20px 16px;}
+
+
+    /* ── ALERT BANNER ── */
+    .alert-banner{border-left:3px solid var(--warning);background:#0d0b00;padding:10px 16px;font-size:10px;color:var(--warning);letter-spacing:.5px;margin-bottom:16px;display:none;}
+    .alert-banner.show{display:block;}
+
+
+    /* ── KPI HEADER ── */
+    .dash-header{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:16px;}
+    .dh-cell{background:var(--bg-panel);padding:18px 16px;}
+    .dh-label{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+    .dh-val{font-size:24px;font-weight:700;color:var(--gold);letter-spacing:-0.5px;line-height:1;}
+    .dh-val.warn{color:var(--warning);}
+    .dh-val.danger{color:var(--danger);}
+    .dh-val.success{color:var(--success);}
+    .dh-sub{font-size:9px;color:var(--text-muted);margin-top:4px;}
+    .progress-wrap{height:3px;background:var(--border);margin-top:10px;}
+    .progress-fill{height:100%;background:var(--gold);transition:width .6s;}
+    .progress-fill.warn{background:var(--warning);}
+    .progress-fill.danger{background:var(--danger);}
+    .progress-fill.success{background:var(--success);}
+
+
+    /* ── TWO COL ── */
+    .two-col{display:grid;grid-template-columns:1fr 380px;gap:12px;margin-bottom:12px;}
+    @media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+
+
+    /* ── PANEL ── */
+    .panel{background:var(--bg-panel);border:1px solid var(--border);}
+    .panel-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#0a0a0a;}
+    .panel-title{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
+    .panel-title::before{content:'[';}
+    .panel-title::after{content:']';}
+    .panel-title::before,.panel-title::after{color:var(--text-muted);}
+    .panel-meta{font-size:9px;color:var(--text-muted);letter-spacing:.5px;}
+    .panel-body{padding:14px;}
+
+
+    /* ── INTRO TABLE ── */
+    .intro-table{width:100%;border-collapse:collapse;}
+    .intro-table th{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;}
+    .intro-table td{padding:8px 8px;border-bottom:1px solid var(--border);font-size:10px;vertical-align:middle;}
+    .intro-table tr:last-child td{border-bottom:none;}
+    .intro-table tr:hover td{background:#0d0d0d;}
+
+
+    .status-badge{display:inline-block;font-size:8px;letter-spacing:1px;padding:2px 6px;text-transform:uppercase;font-weight:700;}
+    .sb-pending{background:#111;color:var(--text-muted);}
+    .sb-submitted{background:#1a1000;color:var(--warning);}
+    .sb-recognised{background:#001a0d;color:var(--success);}
+    .sb-onboarding{background:#001233;color:var(--info);}
+    .sb-closed{background:#0a0a0a;color:var(--success);border:1px solid var(--success);}
+    .sb-lapsed{background:#1a0007;color:var(--danger);}
+
+
+    /* ── FORMS ── */
+    .f-label{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+    .f-input,.f-select,.f-textarea{width:100%;background:var(--bg);border:1px solid var(--border-bright);color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 10px;outline:none;transition:.2s;}
+    .f-input:focus,.f-select:focus,.f-textarea:focus{border-color:var(--gold);}
+    .f-textarea{min-height:60px;resize:vertical;}
+    .f-select option{background:var(--bg);}
+    .form-grid{display:grid;gap:10px;}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .submit-btn{background:var(--gold);color:#000;border:none;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px;cursor:pointer;transition:.2s;width:100%;}
+    .submit-btn:hover{background:var(--gold-hover);}
+    .submit-btn:disabled{background:var(--text-dim);cursor:not-allowed;}
+    .action-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-muted);font-family:var(--mono);font-size:8px;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s;}
+    .action-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+
+    /* ── COMMISSION CALC ── */
+    .calc-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+    .calc-row:last-child{border-bottom:none;}
+    .calc-label{font-size:9px;color:var(--text-muted);letter-spacing:.5px;}
+    .calc-val{font-size:12px;font-weight:700;color:var(--gold);}
+    .calc-val.dim{color:var(--text-muted);}
+    .calc-divider{height:1px;background:var(--gold);margin:8px 0;opacity:.3;}
+
+
+    /* ── TIMELINE / TOUCHPOINTS ── */
+    .tp-row{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+    .tp-row:last-child{border-bottom:none;}
+    .tp-name{font-size:10px;color:var(--text);}
+    .tp-detail{font-size:9px;color:var(--text-muted);margin-top:2px;}
+    .tp-date{font-size:9px;color:var(--text-muted);white-space:nowrap;text-align:right;}
+    .tp-overdue{color:var(--danger);}
+    .tp-ok{color:var(--success);}
+
+
+    /* ── Q TRACKER ── */
+    .q-slot{
+      padding:10px 12px;border:1px solid var(--border);background:var(--bg-card);
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+    }
+    .q-slot.filled{background:#001a0d;border-color:#2a5c00;}
+    .q-slot.empty{background:#0a0a0a;border-color:var(--border);}
+    .q-slot-num{font-size:14px;font-weight:700;color:var(--text-dim);width:24px;}
+    .q-slot.filled .q-slot-num{color:var(--success);}
+    .q-slot-name{font-size:10px;color:var(--text);flex:1;}
+    .q-slot.empty .q-slot-name{color:var(--text-dim);}
+    .q-slot-status{font-size:8px;color:var(--text-muted);}
+
+
+    /* ── SCROLL ── */
+    .scroll-y{overflow-y:auto;max-height:340px;}
+    .scroll-y::-webkit-scrollbar{width:4px;}
+    .scroll-y::-webkit-scrollbar-track{background:var(--bg);}
+    .scroll-y::-webkit-scrollbar-thumb{background:var(--border-bright);}
+
+
+    /* ── MODAL ── */
+    #modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;display:none;align-items:center;justify-content:center;}
+    #modal-overlay.open{display:flex;}
+    .modal-box{background:var(--bg-panel);border:1px solid var(--border-bright);border-top:2px solid var(--gold);width:500px;max-height:90vh;overflow-y:auto;}
+    .modal-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#0a0a0a;position:sticky;top:0;}
+    .modal-close{background:transparent;border:none;color:var(--text-muted);font-family:var(--mono);font-size:16px;cursor:pointer;line-height:1;}
+    .modal-close:hover{color:var(--danger);}
+    .modal-body{padding:16px;}
+    .modal-footer{padding:14px 16px;border-top:1px solid var(--border);background:#0a0a0a;}
+
+
+    /* ── MISC ── */
+    .empty-state{padding:24px;text-align:center;color:var(--text-dim);font-size:10px;letter-spacing:1px;}
+    .status-msg{font-size:10px;min-height:18px;margin-top:8px;text-align:center;}
+    .status-msg.ok{color:var(--success);}
+    .status-msg.err{color:var(--danger);}
+    .status-msg.info{color:var(--warning);}
+    .divider-line{height:1px;background:var(--border);margin:10px 0;}
+
+
+    @media(max-width:700px){
+      .dash-header{grid-template-columns:1fr 1fr;}
+      .form-row{grid-template-columns:1fr;}
+    }
+    @media(max-width:480px){.dash-header{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+
+
+<!-- ── AUTH ── -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">ROMI NEXUS</div>
+    <div class="auth-sub">COMMERCIAL DASHBOARD — TIMOTHY MAWONERA</div>
+
+
+    <div id="stepEmail" class="auth-step active">
+      <div class="auth-label">Email Address</div>
+      <input id="authEmail" class="auth-input" type="email" placeholder="your@email.com"
+             autocomplete="email" maxlength="254" spellcheck="false">
+      <button class="auth-btn" id="sendOtpBtn" onclick="sendOTP()">REQUEST ACCESS CODE</button>
+      <div class="auth-msg" id="authMsg1"></div>
+    </div>
+
+
+    <div id="stepOTP" class="auth-step">
+      <div class="auth-label">6-Digit Access Code</div>
+      <input id="authOTP" class="auth-input" type="text" placeholder="000000"
+             maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code">
+      <button class="auth-btn" id="verifyOtpBtn" onclick="verifyOTP()">VERIFY & ENTER</button>
+      <div class="auth-msg" id="authMsg2"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── APP ── -->
+<div id="appShell">
+  <div class="top-bar">
+    <div>
+      <div class="top-bar-logo">ROMI NEXUS</div>
+      <div class="top-bar-role">FRACTIONAL CCO — <span id="topbarName"></span></div>
+    </div>
+    <div class="top-bar-right">
+      <div class="status-dot"></div>
+      <div id="clock"></div>
+      <button class="logout-btn" onclick="logout()">LOGOUT</button>
+    </div>
+  </div>
+
+
+  <div class="dash-wrap">
+
+
+    <div class="alert-banner" id="alertBanner"></div>
+
+
+    <!-- ── KPI HEADER ── -->
+    <div class="dash-header">
+      <div class="dh-cell">
+        <div class="dh-label">Q1 Introductions</div>
+        <div class="dh-val" id="kpiIntros">—</div>
+        <div class="dh-sub">of 3 required (FCCO §3.5)</div>
+        <div class="progress-wrap"><div class="progress-fill" id="kpiIntrosBar" style="width:0%"></div></div>
+      </div>
+      <div class="dh-cell">
+        <div class="dh-label">Recognised by Viel</div>
+        <div class="dh-val" id="kpiRecognised">—</div>
+        <div class="dh-sub">written recognition email received</div>
+        <div class="progress-wrap"><div class="progress-fill" id="kpiRecBar" style="width:0%"></div></div>
+      </div>
+      <div class="dh-cell">
+        <div class="dh-label">Est. Commission Pipeline</div>
+        <div class="dh-val" id="kpiCommission">—</div>
+        <div class="dh-sub">18% on attributable closed deals</div>
+      </div>
+      <div class="dh-cell">
+        <div class="dh-label">Days to Q1 End</div>
+        <div class="dh-val" id="kpiDays">—</div>
+        <div class="dh-sub">Q1 closes 15 June 2026</div>
+      </div>
+    </div>
+
+
+    <!-- ── MAIN TWO-COL ── -->
+    <div class="two-col">
+
+
+      <!-- LEFT: Intro pipeline -->
+      <div>
+        <!-- Introduction tracker -->
+        <div class="panel" style="margin-bottom:12px;">
+          <div class="panel-header">
+            <div class="panel-title">Introduction Pipeline</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="panel-meta" id="introCount">0 introductions</div>
+              <button class="action-btn" onclick="openAddIntro()">+ LOG INTRO</button>
+            </div>
+          </div>
+          <div class="scroll-y">
+            <table class="intro-table">
+              <thead>
+                <tr>
+                  <th>Counterparty</th>
+                  <th>Commodity</th>
+                  <th>Status</th>
+                  <th>Recognition</th>
+                  <th>Last Touchpoint</th>
+                  <th>Est. Comm.</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="introTableBody">
+                <tr><td colspan="7"><div class="empty-state">NO INTRODUCTIONS LOGGED — ADD YOUR FIRST</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+
+        <!-- Weekly KPI report reminder -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Weekly KPI Report</div>
+            <div class="panel-meta">FCCO §3.5 / §6 — Every Friday 5pm</div>
+          </div>
+          <div class="panel-body">
+            <div class="form-grid">
+              <div>
+                <div class="f-label">Week Ending</div>
+                <input class="f-input" type="date" id="rptDate">
+              </div>
+              <div class="form-row">
+                <div>
+                  <div class="f-label">Hours This Week</div>
+                  <input class="f-input" type="number" id="rptHours" min="0" max="60" step="0.5" placeholder="hrs">
+                </div>
+                <div>
+                  <div class="f-label">Outreach Contacts</div>
+                  <input class="f-input" type="number" id="rptContacts" min="0" max="100" placeholder="count">
+                </div>
+              </div>
+              <div>
+                <div class="f-label">Introductions Submitted to Viel This Week</div>
+                <input class="f-input" type="number" id="rptIntros" min="0" max="20" placeholder="count">
+              </div>
+              <div>
+                <div class="f-label">Viel Recognition Received This Week</div>
+                <input class="f-input" type="number" id="rptRecognitions" min="0" max="20" placeholder="count">
+              </div>
+              <div>
+                <div class="f-label">Compliance Observations / Notes</div>
+                <textarea class="f-textarea" id="rptNotes" maxlength="500" placeholder="Any concerns from prospect conversations, compliance flags, or blockers…"></textarea>
+              </div>
+              <button class="submit-btn" id="rptSubmitBtn" onclick="submitKPIReport()">GENERATE KPI REPORT DRAFT</button>
+              <div class="status-msg" id="rptStatus"></div>
+              <div id="rptOutput" style="display:none;">
+                <div class="f-label" style="margin-bottom:6px;">Report Draft — Copy & Send to Viel</div>
+                <textarea class="f-textarea" id="rptText" style="min-height:180px;font-size:10px;" readonly></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- RIGHT COLUMN -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+
+        <!-- Q1 Slot Tracker -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Q1 Slot Tracker</div>
+            <div class="panel-meta">Mar – Jun 15, 2026</div>
+          </div>
+          <div class="panel-body">
+            <div style="display:flex;flex-direction:column;gap:6px;" id="qSlots"></div>
+            <div style="font-size:9px;color:var(--text-muted);margin-top:12px;line-height:1.7;">
+              › Qualifying intro = named principal (buyer or supplier), NOT a broker<br>
+              › Submit to Viel via email BEFORE any outreach begins<br>
+              › Recognition email timestamp = your commission protection<br>
+              › Without written recognition, introduction has no fee entitlement
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Commission Calculator -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Commission Calculator</div>
+            <div class="panel-meta">FCCO §8 — 18% rate</div>
+          </div>
+          <div class="panel-body">
+            <div class="f-label">Deal Value (USD)</div>
+            <input class="f-input" type="number" id="calcDealVal" placeholder="e.g. 500000" min="0" oninput="updateCalc()" style="margin-bottom:10px;">
+            <div class="f-label">Principal Type</div>
+            <select class="f-select" id="calcType" oninput="updateCalc()" style="margin-bottom:14px;">
+              <option value="founding">Founding Principal (no onboarding fee)</option>
+              <option value="standard">Standard Principal ($2,000 onboarding fee)</option>
+            </select>
+            <div class="calc-divider"></div>
+            <div class="calc-row">
+              <div class="calc-label">Romi Nexus Commission (2% of deal)</div>
+              <div class="calc-val dim" id="calcRomi">—</div>
+            </div>
+            <div class="calc-row">
+              <div class="calc-label">Your commission (18% of above)</div>
+              <div class="calc-val" id="calcYours">—</div>
+            </div>
+            <div class="calc-row">
+              <div class="calc-label">Onboarding fee commission (18% of $2K)</div>
+              <div class="calc-val" id="calcOnboard">—</div>
+            </div>
+            <div class="calc-divider"></div>
+            <div class="calc-row">
+              <div class="calc-label" style="font-weight:700;color:var(--text);">TOTAL ESTIMATED COMMISSION</div>
+              <div class="calc-val" id="calcTotal" style="font-size:16px;">—</div>
+            </div>
+            <div style="font-size:9px;color:var(--text-muted);margin-top:10px;line-height:1.7;">
+              Commission is earned on close — not on onboarding. Attribution requires Viel's written recognition email before onboarding begins.
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Touchpoint reminder -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Touchpoint Monitor</div>
+            <div class="panel-meta">FCCO §8.1 — 6-month lapse rule</div>
+          </div>
+          <div class="scroll-y" style="max-height:180px;">
+            <div id="touchpointList">
+              <div class="empty-state">NO INTRODUCTIONS TO MONITOR</div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Non-negotiables -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Non-Negotiables</div>
+            <div class="panel-meta">FCCO v4.6</div>
+          </div>
+          <div class="panel-body">
+            <div style="font-size:9px;color:var(--text-muted);line-height:2;">
+              <span style="color:var(--danger);">✗</span> Do NOT discuss SAFE terms, valuation, or equity<br>
+              <span style="color:var(--danger);">✗</span> Do NOT co-pitch or present to investors (Viel only)<br>
+              <span style="color:var(--danger);">✗</span> Do NOT guarantee acceptance to any prospect<br>
+              <span style="color:var(--danger);">✗</span> Do NOT introduce brokers or middlemen — principals only<br>
+              <span style="color:var(--danger);">✗</span> Do NOT use any title other than Schedule B approved wording<br>
+              <span style="color:var(--success);">✓</span> Log all outreach in CRM within 24 hours<br>
+              <span style="color:var(--success);">✓</span> Submit intro to Viel via email BEFORE outreach<br>
+              <span style="color:var(--success);">✓</span> Pre-screen all prospects (sanctions) before submitting<br>
+              <span style="color:var(--success);">✓</span> Maintain 6-monthly touchpoints per introduced counterparty<br>
+              <span style="color:var(--success);">✓</span> Weekly KPI report to Viel every Friday by 5pm
+            </div>
+            <div class="divider-line"></div>
+            <div style="font-size:9px;color:var(--text-muted);line-height:1.7;">
+              <strong style="color:var(--text);">Approved LinkedIn Title:</strong><br>
+              "Fractional Chief Commercial Officer, Romi Group F.Z.C — Independent Commercial Consultant"<br>
+              <span style="color:var(--danger);">Deviation = breach of FCCO §2.4</span>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </div>
+
+
+  </div><!-- /dash-wrap -->
+</div><!-- /appShell -->
+
+
+<!-- ── ADD INTRODUCTION MODAL ── -->
+<div id="modal-overlay" role="dialog" aria-modal="true" aria-label="Log Introduction">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="panel-title" id="modalTitle">LOG INTRODUCTION</div>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalMode-addIntro">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:16px;line-height:1.7;">
+          A qualifying introduction under FCCO §3.5 must be a named principal who is a direct buyer or supplier — not a broker or middleman. Submit to Viel via email FIRST and receive written recognition before outreach. Your commission depends on the timestamp.
+        </div>
+
+
+        <div class="form-grid">
+          <div>
+            <div class="f-label">Counterparty Name / Company *</div>
+            <input class="f-input" id="newName" maxlength="120" placeholder="e.g. Addis Ababa Grain Co.">
+          </div>
+          <div class="form-row">
+            <div>
+              <div class="f-label">Commodity *</div>
+              <select class="f-select" id="newCommodity">
+                <option value="">— select —</option>
+                <option value="GOLD">Gold</option>
+                <option value="COFFEE">Coffee</option>
+                <option value="COPPER">Copper</option>
+                <option value="COCOA">Cocoa</option>
+                <option value="SOYBEANS">Soybeans</option>
+                <option value="SUGAR">Sugar</option>
+                <option value="OIL">Oil (WTI/Brent)</option>
+                <option value="OTHER">Other (Schedule E)</option>
+              </select>
+            </div>
+            <div>
+              <div class="f-label">Counterparty Type *</div>
+              <select class="f-select" id="newType">
+                <option value="BUYER">Buyer</option>
+                <option value="SELLER">Seller</option>
+                <option value="BOTH">Both</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="f-label">Estimated Deal Value (USD)</div>
+            <input class="f-input" type="number" id="newDealVal" min="0" placeholder="e.g. 500000">
+          </div>
+          <div>
+            <div class="f-label">Contact Name & Role at Company</div>
+            <input class="f-input" id="newContact" maxlength="100" placeholder="e.g. Jane Smith, CEO">
+          </div>
+
+
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:2px solid var(--gold);padding:10px 12px;">
+            <div style="font-size:8px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;">DUAL ATTRIBUTION PROTOCOL §0.4</div>
+            <div style="font-size:9px;color:var(--text-muted);line-height:1.7;">
+              Before ticking the boxes below, confirm the steps:<br>
+              1. Introduction email sent to Viel (with name, company, commodity, contact details)<br>
+              2. Viel has replied with written recognition<br>
+              3. CRM entry created within 24 hours of first contact<br>
+              4. Sanctions pre-screen completed (FCCO §15.1)<br>
+              The recognition email timestamp is the governing document for your commission.
+            </div>
+          </div>
+
+
+          <div>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="chkEmailSent" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
+              <span style="font-size:9px;color:var(--text-muted);">Introduction email sent to Viel with counterparty details</span>
+            </label>
+          </div>
+          <div>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="chkRecognised" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
+              <span style="font-size:9px;color:var(--text-muted);">Viel's written recognition email RECEIVED (commission protection confirmed)</span>
+            </label>
+          </div>
+          <div>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="chkScreened" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
+              <span style="font-size:9px;color:var(--text-muted);">Sanctions pre-screening completed (FCCO §15.1 — required before submission)</span>
+            </label>
+          </div>
+          <div>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="chkCRM" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
+              <span style="font-size:9px;color:var(--text-muted);">CRM entry created within 24 hours of first contact</span>
+            </label>
+          </div>
+
+
+          <div>
+            <div class="f-label">Notes / Source Context</div>
+            <textarea class="f-textarea" id="newNotes" maxlength="500" placeholder="How introduced, relationship context, CRM entry ID…"></textarea>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="modalMode-touchpoint" style="display:none;">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;line-height:1.7;">
+          Log a touchpoint to protect attribution under FCCO §8.1. Attribution lapses after 6 months without documented activity.
+        </div>
+        <div class="f-label">Touchpoint Description</div>
+        <textarea class="f-textarea" id="tpDesc" maxlength="400" placeholder="Email sent, call held, updated Viel — brief description…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="submit-btn" id="modalActionBtn" onclick="modalAction()">SAVE INTRODUCTION</button>
+      <div class="status-msg" id="modalStatus"></div>
+    </div>
+  </div>
+</div>
+
+
+  <script src="/js/fcco.js"></script>
+</body>
+</html>
+
+
+Co-Founder (Not Integrated):
