@@ -93,6 +93,38 @@
 </head>
 <body>
 
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">ROMI NEXUS</div>
+    <div class="auth-sub">COMMERCIAL DASHBOARD — TIMOTHY MAWONERA</div>
+
+    <div id="stepEmail" class="auth-step active">
+      <div class="auth-label">Corporate Email Address</div>
+      <input id="authEmail" class="auth-input" type="email" placeholder="name@company.com" autocomplete="email">
+      <button class="auth-btn" id="sendOtpBtn">REQUEST ACCESS CODE</button>
+      <div class="auth-msg" id="authMsg1"></div>
+    </div>
+
+    <div id="stepOTP" class="auth-step">
+      <div class="auth-label">6-Digit Access Code</div>
+      <input id="authOTP" class="auth-input" type="text" placeholder="000000" maxlength="6">
+      <button class="auth-btn" id="verifyOtpBtn">VERIFY & ENTER</button>
+      <div class="auth-msg" id="authMsg2"></div>
+    </div>
+  </div>
+</div>
+
+<div id="appShell" style="display:none;">
+  
+  <div class="top-bar">
+    </div>
+
+  <div class="dashboard-wrap">
+    </div>
+
+</div> <script src="/js/fcco.js"></script>
+
+</body>
 <div class="top-bar">
   <div class="top-bar-left">
     <span class="top-logo">ROMI NEXUS</span>
