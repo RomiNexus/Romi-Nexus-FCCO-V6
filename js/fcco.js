@@ -905,6 +905,57 @@ function refreshV6Dashboard() {
   }
 }
 
+// ============================================================
+// ── FCCO V6.1 CSP EVENT BINDINGS (F-06 REPAIR) ──
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Session & Logout
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.clear();
+      window.location.reload();
+    });
+  }
+
+  // 2. Commission Calculator
+  const calcInput = document.getElementById('calcInput');
+  if (calcInput) {
+    calcInput.addEventListener('input', () => {
+      if (typeof updateCalculator === 'function') updateCalculator();
+    });
+  }
+
+  // 3. Action Center Modals
+  const logIntroBtn = document.getElementById('logIntroBtn');
+  if (logIntroBtn) {
+    logIntroBtn.addEventListener('click', () => {
+      if (typeof openModal === 'function') openModal('intro');
+    });
+  }
+
+  const logTPBtn = document.getElementById('logTPBtn');
+  if (logTPBtn) {
+    logTPBtn.addEventListener('click', () => {
+      if (typeof openModal === 'function') openModal('touchpoint');
+    });
+  }
+
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener('click', () => {
+      if (typeof closeModal === 'function') closeModal();
+    });
+  }
+
+  const modalSaveBtn = document.getElementById('modalSaveBtn');
+  if (modalSaveBtn) {
+    modalSaveBtn.addEventListener('click', () => {
+      if (typeof submitModalAction === 'function') submitModalAction();
+    });
+  }
+});
+
 // ── Init ──
 (function init() {
   const s = getSession();
