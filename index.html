@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Romi Nexus | Commercial Dashboard — Timothy Mawonera</title>
   <meta name="robots" content="noindex,nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-proxy.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; frame-ancestors 'none';">  
+  
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://s3.tradingview.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-proxy.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; frame-ancestors 'none';">
+  
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -17,78 +19,53 @@
       --mono:'IBM Plex Mono',monospace;
     }
     * {box-sizing:border-box; margin:0; padding:0;}
-    body {background:var(--bg); color:var(--text); font-family:var(--mono); font-size:12px; min-height:100vh;}
-    ::-webkit-scrollbar {width:3px; height:3px;}
-    ::-webkit-scrollbar-thumb {background:var(--border-bright);}
+    body {background:var(--bg); color:var(--text); font-family:var(--mono); font-size:12px; min-height:100vh; overflow-x:hidden;}
 
-    /* ── TOP BAR ── */
-    .top-bar {position:fixed; top:0; left:0; right:0; z-index:100; height:40px; background:#000; border-bottom:2px solid var(--gold); display:flex; align-items:center; justify-content:space-between; padding:0 16px;}
-    .top-bar-left {display:flex; align-items:center; gap:12px;}
-    .top-logo {font-size:13px; font-weight:700; letter-spacing:5px; color:var(--gold);}
-    .top-tag {font-size:8px; color:var(--text-muted); letter-spacing:3px; padding:2px 8px; border:1px solid var(--border-bright);}
-    .top-bar-right {display:flex; align-items:center; gap:12px;}
-    #dashClock {font-size:10px; color:var(--text-muted);}
-    .logout-btn {background:none; border:1px solid var(--border-bright); color:var(--text-muted); font-family:var(--mono); font-size:9px; padding:3px 10px; cursor:pointer; letter-spacing:1px;}
-    .logout-btn:hover {border-color:var(--danger); color:var(--danger);}
+    /* ── AUTH OVERLAY (DIFC-Required Gate) ── */
+    #authOverlay {position:fixed; inset:0; background:#000; z-index:9999; display:flex; align-items:center; justify-content:center;}
+    .auth-box {background:var(--bg-panel); border:1px solid var(--border-bright); border-top:2px solid var(--gold); width:360px; padding:32px;}
+    .auth-logo {font-size:18px; font-weight:700; color:var(--gold); letter-spacing:4px; margin-bottom:4px; text-align:center;}
+    .auth-sub {font-size:9px; color:var(--text-muted); letter-spacing:2px; margin-bottom:28px; text-align:center;}
+    .auth-label {font-size:9px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px;}
+    .auth-input {width:100%; background:var(--bg); border:1px solid var(--border-bright); color:var(--text); font-family:var(--mono); font-size:12px; padding:10px 12px; outline:none; margin-bottom:16px;}
+    .auth-btn {width:100%; background:var(--gold); color:#000; border:none; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:12px; cursor:pointer;}
+    .auth-msg {font-size:10px; margin-top:10px; text-align:center; min-height:18px;}
+    .auth-msg.err {color:var(--danger);}
+    .auth-msg.ok {color:var(--success);}
+    .auth-step {display:none;}
+    .auth-step.active {display:block;}
 
-    /* ── MAIN LAYOUT ── */
-    .main-wrap {padding:60px 20px 20px 20px; max-width:1400px; margin:0 auto;}
-
-    /* ── STAT BAR ── */
-    .stat-bar {display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:15px;}
-    .stat-card {background:var(--bg-panel); border:1px solid var(--border); padding:15px; text-align:center;}
-    .stat-val {font-size:24px; font-weight:700; color:var(--gold); letter-spacing:2px;}
-    .stat-lbl {font-size:9px; color:var(--text-muted); letter-spacing:2px; margin-top:5px; text-transform:uppercase;}
-
-    /* ── PANELS ── */
-    .dash-grid {display:grid; grid-template-columns:2fr 1fr; gap:15px;}
-    .panel {background:var(--bg-panel); border:1px solid var(--border); margin-bottom:15px;}
-    .panel-header {background:#0a0a0a; border-bottom:1px solid var(--border); padding:10px 15px; display:flex; align-items:center; justify-content:space-between;}
-    .panel-title {font-size:11px; font-weight:700; letter-spacing:2px; color:var(--gold);}
-    .panel-meta {font-size:9px; color:var(--text-muted); letter-spacing:1px;}
-    .panel-body {padding:15px;}
-
-    /* ── TABLES ── */
+    /* ── DASHBOARD STYLES ── */
+    .top-bar {background:#000; border-bottom:1px solid var(--gold); height:42px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; position:sticky; top:0; z-index:1000;}
+    .top-bar-logo {font-size:13px; font-weight:700; letter-spacing:4px; color:var(--gold); text-transform:uppercase;}
+    .dashboard-wrap {max-width:1280px; margin:0 auto; padding:20px 16px;}
+    
+    .panel {background:var(--bg-panel); border:1px solid var(--border); margin-bottom:16px;}
+    .panel-header {padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:#0a0a0a;}
+    .panel-title {font-size:10px; font-weight:700; letter-spacing:2px; color:var(--gold); text-transform:uppercase;}
+    
+    .kpi-grid {display:grid; grid-template-columns:repeat(4, 1fr); gap:1px; background:var(--border); border:1px solid var(--border); margin-bottom:16px;}
+    .kpi-cell {background:var(--bg-panel); padding:16px;}
+    .kpi-label {font-size:8px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px;}
+    .kpi-val {font-size:22px; font-weight:700; color:var(--gold);}
+    
     .data-table {width:100%; border-collapse:collapse; font-size:10px;}
-    .data-table th {font-size:8px; color:var(--text-muted); letter-spacing:1.5px; padding:8px 10px; text-align:left; border-bottom:1px solid var(--border); background:#050505;}
-    .data-table td {padding:10px; border-bottom:1px solid var(--border); vertical-align:middle;}
-    .data-table tr:hover td {background:#0f0f0f;}
-    .status-badge {font-size:8px; padding:2px 6px; border:1px solid; border-radius:2px; letter-spacing:1px;}
-    .status-active {color:var(--success); border-color:rgba(0,230,118,0.3); background:rgba(0,230,118,0.05);}
-    .status-lapsed {color:var(--danger); border-color:rgba(255,23,68,0.3); background:rgba(255,23,68,0.05);}
-    .status-pending {color:var(--warning); border-color:rgba(255,171,0,0.3); background:rgba(255,171,0,0.05);}
+    .data-table th {font-size:8px; color:var(--text-muted); letter-spacing:1.5px; padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); background:#050505;}
+    .data-table td {padding:12px; border-bottom:1px solid var(--border);}
+    
+    .status-badge {font-size:8px; padding:2px 6px; font-weight:700; letter-spacing:1px;}
+    .sb-pending {background:#111; color:var(--text-muted);}
+    .sb-recognised {background:#001a0d; color:var(--success);}
 
-    /* ── CALCULATOR ── */
-    .calc-row {display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);}
-    .calc-row:last-child {border-bottom:none;}
-    .calc-label {font-size:10px; color:var(--text-muted);}
-    .calc-val {font-size:11px; color:var(--gold); font-weight:600;}
-    .calc-val.dim {color:var(--text-dim);}
-    .calc-input {background:#000; border:1px solid var(--border-bright); color:var(--gold); font-family:var(--mono); font-size:12px; padding:6px 10px; width:120px; text-align:right; outline:none;}
-    .calc-input:focus {border-color:var(--gold);}
-
-    /* ── BUTTONS & FORMS ── */
-    .action-btn {display:block; width:100%; background:var(--gold); color:#000; border:none; padding:12px; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:3px; cursor:pointer; margin-bottom:10px;}
-    .action-btn:hover {background:var(--gold-hover);}
-    .action-btn.secondary {background:none; border:1px solid var(--border-bright); color:var(--text); margin-bottom:0;}
-    .action-btn.secondary:hover {border-color:var(--gold); color:var(--gold);}
+    .action-btn {background:var(--gold); color:#000; border:none; padding:8px 16px; font-family:var(--mono); font-size:9px; font-weight:700; cursor:pointer; text-transform:uppercase;}
+    .action-btn.secondary {background:transparent; border:1px solid var(--border-bright); color:var(--text-muted);}
 
     /* ── MODALS ── */
-    .modal-overlay {display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:200; align-items:center; justify-content:center; padding:20px;}
-    .modal-overlay.open {display:flex;}
-    .modal-box {background:var(--bg-panel); border:1px solid var(--border-bright); border-top:2px solid var(--gold); width:100%; max-width:500px;}
-    .modal-header {padding:15px; background:#0a0a0a; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
-    .modal-title {font-size:11px; font-weight:700; color:var(--gold); letter-spacing:2px;}
-    .modal-close {background:none; border:none; color:var(--text-muted); font-size:16px; cursor:pointer; font-family:var(--mono);}
-    .modal-close:hover {color:var(--danger);}
-    .modal-body {padding:20px;}
-    .f-label {font-size:9px; color:var(--text-muted); letter-spacing:2px; margin-bottom:6px; text-transform:uppercase;}
-    .f-input, .f-select, .f-textarea {width:100%; background:#000; border:1px solid var(--border-bright); color:var(--text); font-family:var(--mono); font-size:11px; padding:10px; outline:none; margin-bottom:15px;}
-    .f-input:focus, .f-select:focus, .f-textarea:focus {border-color:var(--gold);}
-    .f-textarea {resize:vertical; min-height:80px;}
-    .modal-footer {padding:15px; border-top:1px solid var(--border); background:#050505;}
-    .submit-btn {width:100%; background:var(--gold); color:#000; border:none; padding:12px; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:2px; cursor:pointer;}
-    .submit-btn:hover {background:var(--gold-hover);}
+    #modal-overlay {position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:8000; display:none; align-items:center; justify-content:center;}
+    #modal-overlay.open {display:flex;}
+    .modal-box {background:var(--bg-panel); border:1px solid var(--border-bright); border-top:2px solid var(--gold); width:500px; padding:24px;}
+    .modal-close {float:right; background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;}
+    .submit-btn {width:100%; background:var(--gold); color:#000; border:none; padding:12px; font-weight:700; cursor:pointer; margin-top:20px;}
   </style>
 </head>
 <body>
@@ -117,242 +94,153 @@
 <div id="appShell" style="display:none;">
   
   <div class="top-bar">
+    <div class="top-bar-logo">ROMI NEXUS — FCCO TERMINAL</div>
+    <div style="display:flex; align-items:center; gap:20px;">
+      <div id="clock" style="font-size:10px; color:var(--text-muted);">00:00:00 GST</div>
+      <button class="logout-btn" id="logoutBtn" style="background:none; border:1px solid var(--border-bright); color:var(--text-muted); font-size:9px; cursor:pointer; padding:4px 10px;">LOGOUT</button>
     </div>
+  </div>
 
   <div class="dashboard-wrap">
-    </div>
-
-</div> <script src="/js/fcco.js"></script>
-
-</body>
-<div class="top-bar">
-  <div class="top-bar-left">
-    <span class="top-logo">ROMI NEXUS</span>
-    <span class="top-tag">FCCO DASHBOARD v6.1</span>
-  </div>
-  <div class="top-bar-right">
-    <span id="dashClock">--:--:--</span>
-    <button class="logout-btn" onclick="sessionStorage.clear(); window.location.reload();">LOGOUT</button>
-  </div>
-</div>
-
-<div class="main-wrap">
-  
-  <div class="stat-bar">
-    <div class="stat-card">
-      <div class="stat-val" id="statActiveIntros">0</div>
-      <div class="stat-lbl">ACTIVE INTRODUCTIONS</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-val" id="statPendingDD">0</div>
-      <div class="stat-lbl">PENDING DD / KYC</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-val" id="statClosedDeals">0</div>
-      <div class="stat-lbl">CLOSED DEALS</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-val" id="statTotalComm">$0.00</div>
-      <div class="stat-lbl">ACCRUED COMMISSION</div>
-    </div>
-  </div>
-
-  <div class="dash-grid">
     
-    <div class="left-col">
+    <div class="kpi-grid">
+      <div class="kpi-cell">
+        <div class="kpi-label">Intros Logged</div>
+        <div class="kpi-val" id="kpiIntros">0</div>
+        <div style="height:2px; background:var(--border); margin-top:8px;"><div id="kpiIntrosBar" style="height:100%; width:0%; background:var(--gold);"></div></div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">Recognised</div>
+        <div class="kpi-val" id="kpiRecognised">0</div>
+        <div style="height:2px; background:var(--border); margin-top:8px;"><div id="kpiRecBar" style="height:100%; width:0%; background:var(--success);"></div></div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">Est. Commission</div>
+        <div class="kpi-val" id="kpiCommission">$0</div>
+        <div style="font-size:8px; color:var(--text-dim); margin-top:4px;">18% OF 2.0% FEE</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-label">Days to Target</div>
+        <div class="kpi-val" id="kpiDays">—</div>
+        <div style="font-size:8px; color:var(--text-dim); margin-top:4px;">DEADLINE: JUN 15</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Active Pipeline</div>
+        <div id="introCount" style="font-size:9px; color:var(--text-muted);">0 introductions</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Counterparty</th>
+              <th>Commodity</th>
+              <th>Stage</th>
+              <th>Viel Rec.</th>
+              <th>Last Contact</th>
+              <th>Est. Comm</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="introTableBody">
+            <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-dim);">NO DATA — LOG YOUR FIRST INTRO</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 400px; gap:16px;">
       
       <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">INTRODUCTORY PIPELINE</div>
-          <div class="panel-meta">PROTECTED UNDER FCCO §8.1</div>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>ENTITY / CONTACT</th>
-                <th>COMMODITY FOCUS</th>
-                <th>INTRO DATE</th>
-                <th>LAST TOUCHPOINT</th>
-                <th>STATUS</th>
-              </tr>
-            </thead>
-            <tbody id="pipelineTbody">
-              <tr><td colspan="5" style="text-align:center; color:var(--text-dim); padding:20px;">LOADING PIPELINE DATA...</td></tr>
-            </tbody>
-          </table>
+        <div class="panel-header"><div class="panel-title">Commission Calculator</div></div>
+        <div style="padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+          <div>
+            <div class="kpi-label">Contract Value (USD)</div>
+            <input type="number" id="calcInput" class="auth-input" style="font-size:20px; color:var(--gold);" placeholder="1000000">
+          </div>
+          <div>
+            <div class="kpi-label">Romi Fee (2.0%)</div>
+            <div id="calcRomi" style="font-size:18px; font-weight:700;">—</div>
+            <div class="kpi-label" style="margin-top:10px;">Your Entitlement (18%)</div>
+            <div id="calcYours" style="font-size:18px; font-weight:700; color:var(--success);">—</div>
+          </div>
         </div>
       </div>
 
       <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">RECENT TOUCHPOINTS</div>
-          <div class="panel-meta">6-MONTH LAPSE PREVENTION</div>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>DATE</th>
-                <th>ENTITY</th>
-                <th>ACTION / NOTE</th>
-                <th>LOGGED BY</th>
-              </tr>
-            </thead>
-            <tbody id="touchpointTbody">
-              <tr><td colspan="4" style="text-align:center; color:var(--text-dim); padding:20px;">LOADING TOUCHPOINT DATA...</td></tr>
-            </tbody>
-          </table>
+        <div class="panel-header"><div class="panel-title">Action Center</div></div>
+        <div style="padding:16px; display:flex; flex-direction:column; gap:10px;">
+          <button class="action-btn" id="logIntroBtn">+ LOG NEW INTRODUCTION</button>
+          <button class="action-btn secondary" id="logTPBtn">+ RECORD TOUCHPOINT</button>
+          <div style="font-size:9px; color:var(--text-dim); line-height:1.5; margin-top:10px;">
+            › Log intros to Viel via email first.<br>
+            › Every 6 months, a touchpoint is required to protect attribution (FCCO §8.1).
+          </div>
         </div>
       </div>
 
     </div>
 
-    <div class="right-col">
+    <div style="display:grid; grid-template-columns: 380px 1fr; gap:16px;">
       
       <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">ACTION CENTER</div>
-        </div>
-        <div class="panel-body">
-          <button class="action-btn" onclick="openModal('intro')">+ LOG NEW INTRODUCTION</button>
-          <button class="action-btn secondary" onclick="openModal('touchpoint')">+ RECORD TOUCHPOINT</button>
+        <div class="panel-header"><div class="panel-title">Touchpoint Monitor</div></div>
+        <div id="touchpointList" style="padding:10px; max-height:300px; overflow-y:auto;">
+          <div style="padding:20px; text-align:center; color:var(--text-dim);">Monitoring inactive...</div>
         </div>
       </div>
 
       <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">COMMISSION CALCULATOR</div>
-          <div class="panel-meta">FCCO §8 — 18% OF ROMI FEE</div>
-        </div>
-        <div class="panel-body">
-          <div class="calc-row" style="align-items:center; margin-bottom:10px;">
-            <div class="calc-label" style="color:var(--text);">Estimated Deal Value (USD)</div>
-            <input type="number" class="calc-input" id="calcInput" placeholder="1000000" oninput="updateCalculator()">
+        <div class="panel-header"><div class="panel-title">Weekly KPI Report Generator</div></div>
+        <div style="padding:16px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <input type="date" id="rptDate" class="auth-input">
+            <input type="text" id="rptHours" class="auth-input" placeholder="Hours logged (e.g. 12)">
           </div>
-          <div class="calc-row">
-            <div class="calc-label">Romi Nexus Commission (2.0% of deal)</div>
-            <div class="calc-val dim" id="calcRomi">—</div>
-          </div>
-          <div class="calc-row">
-            <div class="calc-label">Your entitlement (18% of Romi Fee)</div>
-            <div class="calc-val" id="calcYours" style="color:var(--success);">—</div>
-          </div>
-          <div style="font-size:8px; color:var(--text-dim); margin-top:15px; line-height:1.5;">
-            *Calculations are estimates based on standard 2.0% institutional fee (NCNDA Schedule A). Final payout subject to verified deal closure report and actual funds cleared.
+          <button class="submit-btn" id="genRptBtn" style="margin-top:0;">GENERATE DRAFT REPORT</button>
+          <div id="rptOutput" style="display:none; margin-top:14px;">
+            <textarea id="rptText" class="auth-input" style="height:120px; font-size:10px; color:var(--text-muted);"></textarea>
           </div>
         </div>
       </div>
 
     </div>
-  </div>
-  
-  <div style="text-align:center; padding:15px; font-size:8px; color:var(--text-dim); letter-spacing:2px;">
-    ROMI NEXUS COMMERCIAL DASHBOARD v6.1 — ROMI GROUP FZC — CONFIDENTIAL
-  </div>
-</div>
 
-<div class="modal-overlay" id="fccoModal">
+  </div> <footer style="border-top:1px solid var(--border); padding:20px; text-align:center; font-size:8px; color:var(--text-dim); letter-spacing:1px;">
+    ROMI NEXUS FCCO TERMINAL — ROMI GROUP FZC © 2026<br>
+    AFZ LICENSE NO. 40601 — UAE FEDERAL LAW — DISPUTES: DIFC COURTS
+  </footer>
+
+</div> <div id="modal-overlay">
   <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title" id="modalTitle">LOG ACTIVITY</div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+    <button class="modal-close" id="modalCloseBtn">✕</button>
+    <div class="panel-title" id="modalTitle" style="margin-bottom:20px;">MODAL</div>
+    
+    <div id="modalMode-intro" style="display:none;">
+      <div class="auth-label">Counterparty / Entity Name</div>
+      <input type="text" class="auth-input" id="newEntityName" placeholder="As per Trade License">
+      <div class="auth-label">Commodity Focus</div>
+      <select id="newCommodity" class="auth-input" style="background:#000;">
+        <option value="GOLD">Gold</option>
+        <option value="COPPER">Copper</option>
+        <option value="FOOD">Foodstuff</option>
+      </select>
     </div>
-    <div class="modal-body">
-      
-      <div id="modalMode-intro" style="display:none;">
-        <div class="f-label">Entity / Company Name</div>
-        <input type="text" class="f-input" id="newEntityName" placeholder="e.g., Global Metals LLC">
-        
-        <div class="f-label">Primary Contact & Email</div>
-        <input type="text" class="f-input" id="newContactInfo" placeholder="John Doe - john@example.com">
-        
-        <div class="f-label">Commodity Focus</div>
-        <select class="f-select" id="newCommodity">
-          <option value="GOLD">Gold (XAU)</option>
-          <option value="COPPER">Copper (XCU)</option>
-          <option value="OIL">Crude Oil (WTI/Brent)</option>
-          <option value="AGRI">Agricultural (Sugar/Soy/Corn)</option>
-          <option value="OTHER">Other</option>
-        </select>
 
-        <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; margin-bottom:15px;">
-          <input type="checkbox" id="chkCRM" style="margin-top:2px; flex-shrink:0; accent-color:var(--gold);">
-          <span style="font-size:9px; color:var(--text-muted);">CRM entry created within 24 hours of first contact</span>
-        </label>
-
-        <div class="f-label">Notes / Source Context</div>
-        <textarea class="f-textarea" id="newNotes" maxlength="500" placeholder="How introduced, relationship context, CRM entry ID…"></textarea>
-      </div>
-
-      <div id="modalMode-touchpoint" style="display:none;">
-        <div style="font-size:10px; color:var(--text-muted); margin-bottom:12px; line-height:1.7;">
-          Log a touchpoint to protect attribution under FCCO §8.1. Attribution lapses after 6 months without documented activity.
-        </div>
-        
-        <div class="f-label">Select Entity</div>
-        <select class="f-select" id="tpEntitySelect">
-          <option value="">-- Select Active Introduction --</option>
-          </select>
-
-        <div class="f-label">Touchpoint Description</div>
-        <textarea class="f-textarea" id="tpDesc" maxlength="400" placeholder="Email sent, call held, updated Viel — brief description…"></textarea>
-      </div>
-
+    <div id="modalMode-touchpoint" style="display:none;">
+      <div class="auth-label">Select Entity</div>
+      <select id="tpEntitySelect" class="auth-input" style="background:#000;"></select>
+      <div class="auth-label">Touchpoint Description</div>
+      <textarea id="tpDesc" class="auth-input" style="height:80px;" placeholder="Email, call, or meeting details..."></textarea>
     </div>
-    <div class="modal-footer">
-      <button class="submit-btn" id="modalActionBtn" onclick="submitModalAction()">SAVE RECORD</button>
-    </div>
+
+    <button class="submit-btn" id="modalSaveBtn">SAVE RECORD</button>
   </div>
 </div>
 
 <script src="/js/fcco.js"></script>
-<script>
-  // F-08: Front-end calculator logic aligned to standard 2.0% NCNDA fee and 18% FCCO split
-  function updateCalculator() {
-    const inputVal = parseFloat(document.getElementById('calcInput').value);
-    const romiDisplay = document.getElementById('calcRomi');
-    const yoursDisplay = document.getElementById('calcYours');
-    
-    if (isNaN(inputVal) || inputVal <= 0) {
-      romiDisplay.textContent = '—';
-      yoursDisplay.textContent = '—';
-      return;
-    }
-    
-    const romiFee = inputVal * 0.02;       // 2.0% Institutional Fee
-    const fccoCut = romiFee * 0.18;        // 18% FCCO Entitlement
-    
-    // OWASP A03: Safe data injection via textContent
-    romiDisplay.textContent = '$' + romiFee.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    yoursDisplay.textContent = '$' + fccoCut.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  }
 
-  // Basic Modal UI handlers
-  function openModal(mode) {
-    document.getElementById('modalMode-intro').style.display = 'none';
-    document.getElementById('modalMode-touchpoint').style.display = 'none';
-    
-    if (mode === 'intro') {
-      document.getElementById('modalTitle').textContent = 'LOG NEW INTRODUCTION';
-      document.getElementById('modalMode-intro').style.display = 'block';
-    } else {
-      document.getElementById('modalTitle').textContent = 'RECORD TOUCHPOINT';
-      document.getElementById('modalMode-touchpoint').style.display = 'block';
-    }
-    
-    document.getElementById('fccoModal').classList.add('open');
-  }
-
-  function closeModal() {
-    document.getElementById('fccoModal').classList.remove('open');
-  }
-
-  // Simple clock update
-  setInterval(() => {
-    const now = new Date();
-    document.getElementById('dashClock').textContent = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-  }, 1000);
-</script>
 </body>
 </html>
