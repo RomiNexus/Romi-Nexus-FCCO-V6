@@ -1,13 +1,12 @@
 'use strict';
 // ============================================================
-// ROMI NEXUS — FCCO DASHBOARD v1.1
-// SECURITY: OWASP A03 — all untrusted data via textContent
-//           OWASP A07 — session token in sessionStorage
-//           OWASP A01 — server-side auth; role enforced backend
-//           Input sanitization before any API submission
-// CSP FIX v1.1: replaced bar.style.width = n+'%' with
-//               el.style.setProperty('--bar-width', n+'%')
-//               which is permitted under unsafe-hashes CSP.
+// ROMI NEXUS — FCCO DASHBOARD v1.2
+// CSP FIX v1.1: replaced bar.style.width with setProperty(--bar-width)
+// WHITE PAGE FIX v1.2:
+//   - appShell shown BEFORE authOverlay hidden (no white flash on error)
+//   - bootApp() wrapped in try/catch so any render error shows a message
+//     instead of blank page
+//   - initDateField() guarded with null-check
 // ============================================================
 
 const API_URL = 'https://rominexus-gateway-v6.vacorp-inquiries.workers.dev';
@@ -121,6 +120,7 @@ function generateCSRF() {
 
 function setAuthMsg(step, msg, cls) {
   const el = document.getElementById('authMsg' + step);
+  if (!el) return;
   el.textContent = msg;
   el.className   = 'auth-msg ' + (cls || '');
 }
@@ -131,29 +131,53 @@ function logout() {
 }
 
 // ── Boot ──
+// WHITE PAGE FIX: show appShell FIRST, hide authOverlay SECOND.
+// If any render function throws, the shell is already visible so
+// the user sees the dashboard frame rather than a blank page.
 function bootApp() {
-  document.getElementById('authOverlay').style.display = 'none';
-  document.getElementById('appShell').style.display    = 'block';
-  const s = getSession();
-  _email = s.email; _csrf = s.csrf; _name = s.name;
-  const nameEl = document.getElementById('topbarName');
-  nameEl.textContent = _name || _email;
-  initDateField();
-  refreshKPIs();
-  renderWeekGrid();
-  renderHoursLog();
-  renderQCTable();
-  renderMilestoneTracker();
-  renderAttrLog();
-  checkAlerts();
+  try {
+    // 1. Reveal shell before hiding overlay — prevents white flash on any error
+    const shell   = document.getElementById('appShell');
+    const overlay = document.getElementById('authOverlay');
+    if (shell)   shell.style.display   = 'block';
+    if (overlay) overlay.style.display = 'none';
+
+    const s = getSession();
+    _email = s.email; _csrf = s.csrf; _name = s.name;
+
+    const nameEl = document.getElementById('topbarName');
+    if (nameEl) nameEl.textContent = _name || _email;
+
+    initDateField();
+    refreshKPIs();
+    renderWeekGrid();
+    renderHoursLog();
+    renderQCTable();
+    renderMilestoneTracker();
+    renderAttrLog();
+    checkAlerts();
+  } catch(err) {
+    // Surface errors visibly instead of going white
+    const shell = document.getElementById('appShell');
+    if (shell) {
+      shell.style.display = 'block';
+      const errBanner = document.getElementById('alertBanner');
+      if (errBanner) {
+        errBanner.textContent = '⚠ DASHBOARD RENDER ERROR — ' + String(err.message || err).substring(0, 120) + ' — PLEASE RELOAD';
+        errBanner.classList.add('show');
+      }
+    }
+    console.error('[FCCO bootApp]', err);
+  }
 }
 
 function initDateField() {
+  const el = document.getElementById('logDate');
+  if (!el) return;   // guard — el may not exist if HTML changes
   const d = new Date();
-  const iso = d.getFullYear() + '-' +
+  el.value = d.getFullYear() + '-' +
     String(d.getMonth()+1).padStart(2,'0') + '-' +
     String(d.getDate()).padStart(2,'0');
-  document.getElementById('logDate').value = iso;
 }
 
 // ── KPIs ──
@@ -180,7 +204,6 @@ function refreshKPIs() {
     qcEl.className   = 'dh-val ' + (qcPassed >= 18 ? 'success' : qcPassed >= 10 ? '' : qcPassed < 5 ? 'danger' : 'warn');
   }
 
-  // CSP FIX: use CSS custom property instead of el.style.width
   const qcBar = document.getElementById('kpiQCBar');
   if (qcBar) {
     qcBar.style.setProperty('--bar-width', qcPct + '%');
@@ -193,7 +216,6 @@ function refreshKPIs() {
     hEl.className   = 'dh-val ' + (weekHours >= 35 ? 'success' : weekHours >= 25 ? 'warn' : 'danger');
   }
 
-  // CSP FIX: use CSS custom property instead of el.style.width
   const hBar = document.getElementById('kpiHoursBar');
   if (hBar) {
     hBar.style.setProperty('--bar-width', hoursPct + '%');
@@ -303,9 +325,9 @@ async function submitHoursLog() {
   log.unshift(entry);
   setLocalData('hours_log', log);
 
-  document.getElementById('logHours').value   = '';
+  document.getElementById('logHours').value    = '';
   document.getElementById('logActivity').value = '';
-  document.getElementById('logDesc').value    = '';
+  document.getElementById('logDesc').value     = '';
 
   setStatus('logStatus', '✓ LOGGED — ENSURE THIS IS ENTERED IN THE ACTUAL CRM', 'ok');
   document.getElementById('logSubmitBtn').disabled = false;
@@ -565,11 +587,11 @@ function modalAction() {
 
 // ── Milestones ──
 const MILESTONES = [
-  { label: 'Week 2 target',   date: '2026-03-30', target:  3 },
-  { label: 'Week 4 target',   date: '2026-04-14', target:  6 },
-  { label: 'Week 6 target',   date: '2026-04-26', target:  9 },
-  { label: 'Week 8 target',   date: '2026-05-10', target: 12 },
-  { label: 'Week 13 buffer',  date: '2026-06-15', target: 19 },
+  { label: 'Week 2 target',     date: '2026-03-30', target:  3 },
+  { label: 'Week 4 target',     date: '2026-04-14', target:  6 },
+  { label: 'Week 6 target',     date: '2026-04-26', target:  9 },
+  { label: 'Week 8 target',     date: '2026-05-10', target: 12 },
+  { label: 'Week 13 buffer',    date: '2026-06-15', target: 19 },
   { label: 'KPI hard deadline', date: '2026-06-30', target: 20 },
 ];
 
@@ -702,7 +724,7 @@ setInterval(updateClock, 1000);
 updateClock();
 
 // ============================================================
-// ── CSP EVENT BINDINGS (F-06 / OWASP HARDENING) ──
+// ── CSP EVENT BINDINGS ──
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   const sendOtpBtn = document.getElementById('sendOtpBtn');
@@ -717,12 +739,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const logSubmitBtn = document.getElementById('logSubmitBtn');
   if (logSubmitBtn) logSubmitBtn.addEventListener('click', submitHoursLog);
 
-  const actionBtns = document.querySelectorAll('.action-btn');
-  actionBtns.forEach(btn => {
-    if (btn.textContent.trim() === '+ ADD') {
-      btn.addEventListener('click', openAddQC);
-    }
-  });
+  // Bind the "+ ADD" button by ID — safer than querySelectorAll text match
+  const addQCBtn = document.getElementById('addQCBtn');
+  if (addQCBtn) addQCBtn.addEventListener('click', openAddQC);
 
   const modalCloseBtn = document.querySelector('.modal-close');
   if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
