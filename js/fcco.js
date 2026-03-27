@@ -1,13 +1,15 @@
 'use strict';
 // ============================================================
-// ROMI NEXUS — FCCO DASHBOARD v1.0
+// ROMI NEXUS — FCCO DASHBOARD v1.1
 // SECURITY: OWASP A03 — all untrusted data via textContent
 //           OWASP A07 — session token in sessionStorage
 //           OWASP A01 — server-side auth; role enforced backend
 //           Input sanitization before any API submission
+// CSP FIX v1.1: replaced bar.style.width = n+'%' with
+//               el.style.setProperty('--bar-width', n+'%')
+//               which is permitted under unsafe-hashes CSP.
 // ============================================================
 
-// FIX: was missing https:// — caused POST to relative path on mawops domain
 const API_URL = 'https://rominexus-gateway-v6.vacorp-inquiries.workers.dev';
 
 function sanitize(str) {
@@ -173,35 +175,49 @@ function refreshKPIs() {
   const pipeline  = qcList.filter(q => q.gateStatus !== 'PASS').length;
 
   const qcEl = document.getElementById('kpiQC');
-  qcEl.textContent = qcPassed;
-  qcEl.className   = 'dh-val ' + (qcPassed >= 18 ? 'success' : qcPassed >= 10 ? '' : qcPassed < 5 ? 'danger' : 'warn');
+  if (qcEl) {
+    qcEl.textContent = qcPassed;
+    qcEl.className   = 'dh-val ' + (qcPassed >= 18 ? 'success' : qcPassed >= 10 ? '' : qcPassed < 5 ? 'danger' : 'warn');
+  }
 
+  // CSP FIX: use CSS custom property instead of el.style.width
   const qcBar = document.getElementById('kpiQCBar');
-  qcBar.style.width     = qcPct + '%';
-  qcBar.className       = 'progress-fill ' + (qcPassed >= 18 ? '' : qcPassed < 5 ? 'danger' : 'warn');
+  if (qcBar) {
+    qcBar.style.setProperty('--bar-width', qcPct + '%');
+    qcBar.className = 'progress-fill ' + (qcPassed >= 18 ? '' : qcPassed < 5 ? 'danger' : 'warn');
+  }
 
   const hEl = document.getElementById('kpiHours');
-  hEl.textContent = weekHours.toFixed(1) + 'h';
-  hEl.className   = 'dh-val ' + (weekHours >= 35 ? 'success' : weekHours >= 25 ? 'warn' : 'danger');
+  if (hEl) {
+    hEl.textContent = weekHours.toFixed(1) + 'h';
+    hEl.className   = 'dh-val ' + (weekHours >= 35 ? 'success' : weekHours >= 25 ? 'warn' : 'danger');
+  }
 
+  // CSP FIX: use CSS custom property instead of el.style.width
   const hBar = document.getElementById('kpiHoursBar');
-  hBar.style.width  = hoursPct + '%';
-  hBar.className    = 'progress-fill ' + (weekHours >= 35 ? '' : weekHours >= 20 ? 'warn' : 'danger');
+  if (hBar) {
+    hBar.style.setProperty('--bar-width', hoursPct + '%');
+    hBar.className = 'progress-fill ' + (weekHours >= 35 ? '' : weekHours >= 20 ? 'warn' : 'danger');
+  }
 
   const dEl = document.getElementById('kpiDays');
-  dEl.textContent = days;
-  dEl.className   = 'dh-val ' + (days > 30 ? '' : days > 14 ? 'warn' : 'danger');
+  if (dEl) {
+    dEl.textContent = days;
+    dEl.className   = 'dh-val ' + (days > 30 ? '' : days > 14 ? 'warn' : 'danger');
+  }
 
   const pEl = document.getElementById('kpiPipeline');
-  pEl.textContent = pipeline;
-  pEl.className   = 'dh-val ' + (pipeline >= 3 ? '' : 'warn');
+  if (pEl) {
+    pEl.textContent = pipeline;
+    pEl.className   = 'dh-val ' + (pipeline >= 3 ? '' : 'warn');
+  }
 
   const totalH = hoursLog.reduce((s,e) => s + (parseFloat(e.hours)||0), 0);
   const ttEl = document.getElementById('totalHoursAllTime');
-  ttEl.textContent = 'Total: ' + totalH.toFixed(1) + 'h logged';
+  if (ttEl) ttEl.textContent = 'Total: ' + totalH.toFixed(1) + 'h logged';
 
   const wcEl = document.getElementById('weekTotal');
-  wcEl.textContent = weekHours.toFixed(1) + 'h / 35h min';
+  if (wcEl) wcEl.textContent = weekHours.toFixed(1) + 'h / 35h min';
 }
 
 function calcWeekHours(log) {
@@ -226,6 +242,7 @@ function calcDayHours(log, isoDate) {
 function renderWeekGrid() {
   const log   = getLocalData('hours_log', []);
   const grid  = document.getElementById('weekGrid');
+  if (!grid) return;
   grid.innerHTML = '';
   const now  = new Date();
   const day  = now.getDay();
@@ -300,6 +317,7 @@ async function submitHoursLog() {
 function renderHoursLog() {
   const log = getLocalData('hours_log', []);
   const el  = document.getElementById('hoursLogList');
+  if (!el) return;
   el.innerHTML = '';
   if (!log.length) {
     const empty = document.createElement('div');
@@ -317,8 +335,6 @@ function renderHoursLog() {
     desc.className   = 'log-desc';
     desc.textContent = e.desc;
     const meta = document.createElement('div');
-    // FIX: was meta.style.color = ... which violates CSP style-src
-    // Now uses a CSS class instead
     meta.className   = 'log-meta js-log-meta';
     meta.textContent = (e.activity || '').replace(/_/g,' ') + ' · ' + e.date;
     left.appendChild(desc);
@@ -338,8 +354,9 @@ function renderHoursLog() {
 function renderQCTable() {
   const list = getLocalData('qc_list', []);
   const body = document.getElementById('qcTableBody');
+  if (!body) return;
   const countEl = document.getElementById('qcCount');
-  countEl.textContent = list.length + ' counterpart' + (list.length===1?'y':'ies');
+  if (countEl) countEl.textContent = list.length + ' counterpart' + (list.length===1?'y':'ies');
 
   if (!list.length) {
     body.innerHTML = '<tr><td colspan="6"><div class="empty-state">NO COUNTERPARTIES — ADD YOUR FIRST</div></td></tr>';
@@ -375,7 +392,6 @@ function renderQCTable() {
     tdAttr.appendChild(attrBadge);
 
     const tdAct = document.createElement('td');
-    // FIX: was tdAct.style.display='flex'; tdAct.style.gap='4px'; — violates CSP
     tdAct.className = 'js-flex-gap4';
 
     const gateBtn = document.createElement('button');
@@ -467,10 +483,12 @@ function updateGateStatus() {
   const total  = chks.length;
   const allPass = passed === total;
   const disp   = document.getElementById('gateStatusDisplay');
-  disp.className = 'gate-status ' + (allPass ? 'pass' : 'fail');
-  disp.textContent = allPass
-    ? '✓ GATE PASSED — READY TO SUBMIT TO VIEL'
-    : '⚠ GATE INCOMPLETE — ' + passed + ' OF ' + total + ' ITEMS CONFIRMED';
+  if (disp) {
+    disp.className = 'gate-status ' + (allPass ? 'pass' : 'fail');
+    disp.textContent = allPass
+      ? '✓ GATE PASSED — READY TO SUBMIT TO VIEL'
+      : '⚠ GATE INCOMPLETE — ' + passed + ' OF ' + total + ' ITEMS CONFIRMED';
+  }
 }
 
 function closeModal() {
@@ -559,6 +577,7 @@ function renderMilestoneTracker() {
   const qcList = getLocalData('qc_list', []);
   const passed = qcList.filter(q => q.gateStatus === 'PASS').length;
   const el     = document.getElementById('milestoneTracker');
+  if (!el) return;
   el.innerHTML = '';
   const today  = new Date(); today.setHours(0,0,0,0);
 
@@ -568,7 +587,6 @@ function renderMilestoneTracker() {
     const isPast = mDate < today;
     const hit    = passed >= m.target;
 
-    // FIX: replaced all el.style.cssText assignments with className-based approach
     const wrap  = document.createElement('div');
     wrap.className = 'js-wrap-border';
 
@@ -607,6 +625,7 @@ function renderMilestoneTracker() {
 function renderAttrLog() {
   const log = getLocalData('attr_log', []);
   const el  = document.getElementById('attrLog');
+  if (!el) return;
   el.innerHTML = '';
   if (!log.length) {
     const empty = document.createElement('div');
@@ -656,7 +675,7 @@ function checkAlerts() {
   const daysLeft= Math.max(0, Math.round((new Date('2026-06-30') - today) / 86400000));
   if (daysLeft < 30 && qcP < 15) alerts.push('⚠ CRITICAL — ' + (20-qcP) + ' QC STILL NEEDED WITH ' + daysLeft + ' DAYS LEFT');
 
-  if (alerts.length) {
+  if (alerts.length && banner) {
     banner.textContent = alerts.join('  ·  ');
     banner.classList.add('show');
   }

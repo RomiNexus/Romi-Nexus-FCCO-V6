@@ -84,7 +84,9 @@
     .dh-val.success{color:var(--success);}
     .dh-sub{font-size:9px;color:var(--text-muted);margin-top:4px;}
     .progress-wrap{height:3px;background:var(--border);margin-top:10px;}
-    .progress-fill{height:100%;background:var(--gold);transition:width .6s;}
+    /* CSP FIX: progress bar width is set via --bar-width CSS variable from JS
+       using el.style.setProperty('--bar-width', n+'%') which is CSP-safe */
+    .progress-fill{height:100%;background:var(--gold);width:var(--bar-width, 0%);transition:width .6s;}
     .progress-fill.warn{background:var(--warning);}
     .progress-fill.danger{background:var(--danger);}
     .progress-fill.success{background:var(--success);}
@@ -103,22 +105,52 @@
     .panel-meta{font-size:9px;color:var(--text-muted);letter-spacing:.5px;}
     .panel-body{padding:14px;}
 
-    /* ── INTRO TABLE ── */
-    .intro-table{width:100%;border-collapse:collapse;}
-    .intro-table th{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;}
-    .intro-table td{padding:8px 8px;border-bottom:1px solid var(--border);font-size:10px;vertical-align:middle;}
-    .intro-table tr:last-child td{border-bottom:none;}
-    .intro-table tr:hover td{background:#0d0d0d;}
+    /* ── QC TABLE ── */
+    .qc-table{width:100%;border-collapse:collapse;}
+    .qc-table th{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;}
+    .qc-table td{padding:8px 8px;border-bottom:1px solid var(--border);font-size:10px;vertical-align:middle;}
+    .qc-table tr:last-child td{border-bottom:none;}
+    .qc-table tr:hover td{background:#0d0d0d;}
+    .stage-badge{display:inline-block;font-size:8px;letter-spacing:1px;padding:2px 6px;text-transform:uppercase;font-weight:700;background:#111;color:var(--text-muted);}
+    .stage-badge.stage-1{background:#001233;color:var(--info);}
+    .stage-badge.stage-2{background:#1a1000;color:var(--warning);}
+    .stage-badge.stage-3{background:#001a0d;color:var(--success);}
+    .gate-pass{color:var(--success);font-size:9px;font-weight:700;}
+    .gate-fail{color:var(--danger);font-size:9px;font-weight:700;}
+    .gate-na{color:var(--text-muted);font-size:9px;}
+    .attr-badge{display:inline-block;font-size:8px;letter-spacing:1px;padding:2px 6px;text-transform:uppercase;font-weight:700;}
+    .attr-timothy{background:#001a0d;color:var(--success);}
+    .attr-mario{background:#0d0010;color:#c97fff;}
+    .attr-shared{background:#001233;color:var(--info);}
 
-    .status-badge{display:inline-block;font-size:8px;letter-spacing:1px;padding:2px 6px;text-transform:uppercase;font-weight:700;}
-    .sb-pending{background:#111;color:var(--text-muted);}
-    .sb-submitted{background:#1a1000;color:var(--warning);}
-    .sb-recognised{background:#001a0d;color:var(--success);}
-    .sb-onboarding{background:#001233;color:var(--info);}
-    .sb-closed{background:#0a0a0a;color:var(--success);border:1px solid var(--success);}
-    .sb-lapsed{background:#1a0007;color:var(--danger);}
+    /* ── WEEK GRID ── */
+    .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px;}
+    .day-block{background:var(--bg-card);border:1px solid var(--border);padding:8px 4px;text-align:center;font-size:9px;color:var(--text-dim);min-height:36px;display:flex;align-items:center;justify-content:center;}
+    .day-block.filled{background:#001a0d;border-color:#2a5c00;color:var(--success);}
+    .day-block.target{background:#0d0a00;border-color:#5c4400;color:var(--warning);}
+    .day-block.today{border-color:var(--gold);}
 
-    /* ── FORMS ── */
+    /* ── HOURS LOG ── */
+    .log-entry{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);gap:8px;}
+    .log-entry:last-child{border-bottom:none;}
+    .log-desc{font-size:10px;color:var(--text);margin-bottom:2px;}
+    .log-meta{font-size:9px;color:var(--text-muted);}
+    .log-hours{font-size:11px;font-weight:700;color:var(--gold);white-space:nowrap;}
+
+    /* ── MILESTONE ── */
+    .gate-status{font-size:9px;padding:6px 10px;margin-top:10px;font-weight:700;letter-spacing:.5px;}
+    .gate-status.pass{background:#001a0d;color:var(--success);}
+    .gate-status.fail{background:#1a0007;color:var(--danger);}
+
+    /* ── CHECKLIST ── */
+    .chk-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+    .chk-item:last-child{border-bottom:none;}
+    .chk-box{width:14px;height:14px;border:1px solid var(--border-bright);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--success);}
+    .chk-item.checked .chk-box{background:var(--success);border-color:var(--success);color:#000;}
+    .chk-label{font-size:9px;color:var(--text-muted);line-height:1.5;}
+    .chk-item.checked .chk-label{color:var(--text);}
+
+    /* ── MODAL ADD QC ── */
     .f-label{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
     .f-input,.f-select,.f-textarea{width:100%;background:var(--bg);border:1px solid var(--border-bright);color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 10px;outline:none;transition:.2s;}
     .f-input:focus,.f-select:focus,.f-textarea:focus{border-color:var(--gold);}
@@ -132,35 +164,11 @@
     .action-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-muted);font-family:var(--mono);font-size:8px;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s;}
     .action-btn:hover{border-color:var(--gold);color:var(--gold);}
 
-    /* ── COMMISSION CALC ── */
-    .calc-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
-    .calc-row:last-child{border-bottom:none;}
-    .calc-label{font-size:9px;color:var(--text-muted);letter-spacing:.5px;}
-    .calc-val{font-size:12px;font-weight:700;color:var(--gold);}
-    .calc-val.dim{color:var(--text-muted);}
-    .calc-divider{height:1px;background:var(--gold);margin:8px 0;opacity:.3;}
-
-    /* ── TIMELINE / TOUCHPOINTS ── */
-    .tp-row{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-    .tp-row:last-child{border-bottom:none;}
-    .tp-name{font-size:10px;color:var(--text);}
-    .tp-detail{font-size:9px;color:var(--text-muted);margin-top:2px;}
-    .tp-date{font-size:9px;color:var(--text-muted);white-space:nowrap;text-align:right;}
-    .tp-overdue{color:var(--danger);}
-    .tp-ok{color:var(--success);}
-
-    /* ── Q TRACKER ── */
-    .q-slot{
-      padding:10px 12px;border:1px solid var(--border);background:var(--bg-card);
-      display:flex;align-items:center;justify-content:space-between;gap:8px;
-    }
-    .q-slot.filled{background:#001a0d;border-color:#2a5c00;}
-    .q-slot.empty{background:#0a0a0a;border-color:var(--border);}
-    .q-slot-num{font-size:14px;font-weight:700;color:var(--text-dim);width:24px;}
-    .q-slot.filled .q-slot-num{color:var(--success);}
-    .q-slot-name{font-size:10px;color:var(--text);flex:1;}
-    .q-slot.empty .q-slot-name{color:var(--text-dim);}
-    .q-slot-status{font-size:8px;color:var(--text-muted);}
+    /* ── ATTR LOG ── */
+    .attr-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px;}
+    .attr-row:last-child{border-bottom:none;}
+    .attr-name{font-size:10px;color:var(--text);}
+    .attr-detail{font-size:9px;color:var(--text-muted);margin-top:2px;}
 
     /* ── SCROLL ── */
     .scroll-y{overflow-y:auto;max-height:340px;}
@@ -178,11 +186,9 @@
     .modal-body{padding:16px;}
     .modal-footer{padding:14px 16px;border-top:1px solid var(--border);background:#0a0a0a;}
 
-    /* ── JS-SET INLINE STYLES ──
-       These classes mirror exactly what fcco.js sets via el.style.*
-       so the browser uses class-based rules instead of inline attributes,
-       eliminating the remaining CSP style-src violations.
-    */
+    /* ── JS-DRIVEN CLASS REPLACEMENTS (CSP-safe) ──
+       fcco.js sets className instead of el.style.* for all layout.
+       These rules provide the visual equivalent. */
     .js-flex-gap4{display:flex;gap:4px;}
     .js-row-between{display:flex;align-items:center;justify-content:space-between;gap:8px;}
     .js-wrap-border{padding:6px 0;border-bottom:1px solid var(--border);}
@@ -252,173 +258,150 @@
 
     <div class="alert-banner" id="alertBanner"></div>
 
+    <!-- KPI HEADER — IDs match fcco.js refreshKPIs() -->
     <div class="dash-header">
       <div class="dh-cell">
-        <div class="dh-label">Q1 Introductions</div>
-        <div class="dh-val" id="kpiIntros">—</div>
-        <div class="dh-sub">of 3 required (FCCO §3.5)</div>
-        <div class="progress-wrap"><div class="progress-fill" id="kpiIntrosBar" style="width:0%"></div></div>
+        <div class="dh-label">QC Gates Passed</div>
+        <div class="dh-val" id="kpiQC">—</div>
+        <div class="dh-sub">of 20 required by 30 Jun 2026</div>
+        <div class="progress-wrap"><div class="progress-fill" id="kpiQCBar"></div></div>
       </div>
       <div class="dh-cell">
-        <div class="dh-label">Recognised by Viel</div>
-        <div class="dh-val" id="kpiRecognised">—</div>
-        <div class="dh-sub">written recognition email received</div>
-        <div class="progress-wrap"><div class="progress-fill" id="kpiRecBar" style="width:0%"></div></div>
+        <div class="dh-label">Hours This Week</div>
+        <div class="dh-val" id="kpiHours">—</div>
+        <div class="dh-sub" id="weekTotal">0h / 35h min</div>
+        <div class="progress-wrap"><div class="progress-fill" id="kpiHoursBar"></div></div>
       </div>
       <div class="dh-cell">
-        <div class="dh-label">Est. Commission Pipeline</div>
-        <div class="dh-val" id="kpiCommission">—</div>
-        <div class="dh-sub">18% on attributable closed deals</div>
-      </div>
-      <div class="dh-cell">
-        <div class="dh-label">Days to Q1 End</div>
+        <div class="dh-label">Days to Deadline</div>
         <div class="dh-val" id="kpiDays">—</div>
-        <div class="dh-sub">Q1 closes 15 June 2026</div>
+        <div class="dh-sub">KPI hard deadline 30 Jun 2026</div>
+      </div>
+      <div class="dh-cell">
+        <div class="dh-label">Pipeline (not passed)</div>
+        <div class="dh-val" id="kpiPipeline">—</div>
+        <div class="dh-sub" id="totalHoursAllTime">Total: 0h logged</div>
       </div>
     </div>
 
     <div class="two-col">
 
       <div>
+
+        <!-- QC PIPELINE TABLE -->
         <div class="panel" style="margin-bottom:12px;">
           <div class="panel-header">
-            <div class="panel-title">Introduction Pipeline</div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div class="panel-meta" id="introCount">0 introductions</div>
-              <button class="action-btn" id="logIntroBtn">+ LOG INTRO</button>
+            <div class="panel-title">QC Pipeline</div>
+            <div class="js-flex-gap4" style="align-items:center;">
+              <div class="panel-meta" id="qcCount">0 counterparties</div>
+              <button class="action-btn" id="addQCBtn">+ ADD</button>
             </div>
           </div>
           <div class="scroll-y">
-            <table class="intro-table">
+            <table class="qc-table">
               <thead>
                 <tr>
                   <th>Counterparty</th>
                   <th>Commodity</th>
-                  <th>Status</th>
-                  <th>Recognition</th>
-                  <th>Last Touchpoint</th>
-                  <th>Est. Comm.</th>
-                  <th></th>
+                  <th>Stage</th>
+                  <th>Gate</th>
+                  <th>Attribution</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
-              <tbody id="introTableBody">
-                <tr><td colspan="7"><div class="empty-state">NO INTRODUCTIONS LOGGED — ADD YOUR FIRST</div></td></tr>
+              <tbody id="qcTableBody">
+                <tr><td colspan="6"><div class="empty-state">NO COUNTERPARTIES — ADD YOUR FIRST</div></td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <div class="panel">
+        <!-- HOURS LOG -->
+        <div class="panel" style="margin-bottom:12px;">
           <div class="panel-header">
-            <div class="panel-title">Weekly KPI Report</div>
-            <div class="panel-meta">FCCO §3.5 / §6 — Every Friday 5pm</div>
+            <div class="panel-title">Hours Log</div>
+            <div class="panel-meta">MOU §3.2 — 35h/week minimum</div>
           </div>
           <div class="panel-body">
             <div class="form-grid">
-              <div>
-                <div class="f-label">Week Ending</div>
-                <input class="f-input" type="date" id="rptDate">
-              </div>
               <div class="form-row">
                 <div>
-                  <div class="f-label">Hours This Week</div>
-                  <input class="f-input" type="number" id="rptHours" min="0" max="60" step="0.5" placeholder="hrs">
+                  <div class="f-label">Date</div>
+                  <input class="f-input" type="date" id="logDate">
                 </div>
                 <div>
-                  <div class="f-label">Outreach Contacts</div>
-                  <input class="f-input" type="number" id="rptContacts" min="0" max="100" placeholder="count">
+                  <div class="f-label">Hours</div>
+                  <input class="f-input" type="number" id="logHours" min="0.5" max="16" step="0.5" placeholder="hrs">
                 </div>
               </div>
               <div>
-                <div class="f-label">Introductions Submitted to Viel This Week</div>
-                <input class="f-input" type="number" id="rptIntros" min="0" max="20" placeholder="count">
+                <div class="f-label">Activity Type</div>
+                <select class="f-select" id="logActivity">
+                  <option value="">— select —</option>
+                  <option value="OUTREACH">Outreach / Prospecting</option>
+                  <option value="INTRO_PREP">Introduction Preparation</option>
+                  <option value="VIEL_COMMS">Viel Communications</option>
+                  <option value="QC_SCREENING">QC / Screening</option>
+                  <option value="CRM">CRM / Admin</option>
+                  <option value="COMPLIANCE">Compliance Review</option>
+                  <option value="OTHER">Other</option>
+                </select>
               </div>
               <div>
-                <div class="f-label">Viel Recognition Received This Week</div>
-                <input class="f-input" type="number" id="rptRecognitions" min="0" max="20" placeholder="count">
+                <div class="f-label">Description</div>
+                <textarea class="f-textarea" id="logDesc" maxlength="500" placeholder="Brief description of work done…"></textarea>
               </div>
-              <div>
-                <div class="f-label">Compliance Observations / Notes</div>
-                <textarea class="f-textarea" id="rptNotes" maxlength="500" placeholder="Any concerns from prospect conversations, compliance flags, or blockers…"></textarea>
-              </div>
-              <button class="submit-btn" id="genRptBtn">GENERATE KPI REPORT DRAFT</button>
-              <div class="status-msg" id="rptStatus"></div>
-              <div id="rptOutput" style="display:none;">
-                <div class="f-label" style="margin-bottom:6px;">Report Draft — Copy &amp; Send to Viel</div>
-                <textarea class="f-textarea" id="rptText" style="min-height:180px;font-size:10px;" readonly></textarea>
-              </div>
+              <button class="submit-btn" id="logSubmitBtn">LOG HOURS</button>
+              <div class="status-msg" id="logStatus"></div>
             </div>
           </div>
         </div>
+
+        <!-- WEEK GRID -->
+        <div class="panel" style="margin-bottom:12px;">
+          <div class="panel-header">
+            <div class="panel-title">Week at a Glance</div>
+            <div class="panel-meta">Mon – Sun</div>
+          </div>
+          <div class="panel-body">
+            <div class="week-grid" id="weekGrid"></div>
+          </div>
+        </div>
+
+        <!-- HOURS LOG LIST -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Activity History</div>
+            <div class="panel-meta">Last 50 entries</div>
+          </div>
+          <div class="scroll-y panel-body" id="hoursLogList"></div>
+        </div>
+
       </div>
 
       <div style="display:flex;flex-direction:column;gap:12px;">
 
+        <!-- MILESTONE TRACKER -->
         <div class="panel">
           <div class="panel-header">
-            <div class="panel-title">Q1 Slot Tracker</div>
-            <div class="panel-meta">Mar – Jun 15, 2026</div>
+            <div class="panel-title">Milestone Tracker</div>
+            <div class="panel-meta">Mar – Jun 30, 2026</div>
           </div>
           <div class="panel-body">
-            <div style="display:flex;flex-direction:column;gap:6px;" id="qSlots"></div>
-            <div style="font-size:9px;color:var(--text-muted);margin-top:12px;line-height:1.7;">
-              › Qualifying intro = named principal (buyer or supplier), NOT a broker<br>
-              › Submit to Viel via email BEFORE any outreach begins<br>
-              › Recognition email timestamp = your commission protection<br>
-              › Without written recognition, introduction has no fee entitlement
-            </div>
+            <div id="milestoneTracker"></div>
           </div>
         </div>
 
+        <!-- ATTRIBUTION LOG -->
         <div class="panel">
           <div class="panel-header">
-            <div class="panel-title">Commission Calculator</div>
-            <div class="panel-meta">FCCO §8 — 18% rate</div>
+            <div class="panel-title">Attribution Log</div>
+            <div class="panel-meta">FCCO §0.4</div>
           </div>
-          <div class="panel-body">
-            <div class="f-label">Deal Value (USD)</div>
-            <input class="f-input" type="number" id="calcInput" placeholder="e.g. 500000" min="0" style="margin-bottom:10px;">
-            <div class="f-label">Principal Type</div>
-            <select class="f-select" id="calcType" style="margin-bottom:14px;">
-              <option value="founding">Founding Principal (no onboarding fee)</option>
-              <option value="standard">Standard Principal ($2,000 onboarding fee)</option>
-            </select>
-            <div class="calc-divider"></div>
-            <div class="calc-row">
-              <div class="calc-label">Romi Nexus Commission (2% of deal)</div>
-              <div class="calc-val dim" id="calcRomi">—</div>
-            </div>
-            <div class="calc-row">
-              <div class="calc-label">Your commission (18% of above)</div>
-              <div class="calc-val" id="calcYours">—</div>
-            </div>
-            <div class="calc-row">
-              <div class="calc-label">Onboarding fee commission (18% of $2K)</div>
-              <div class="calc-val" id="calcOnboard">—</div>
-            </div>
-            <div class="calc-divider"></div>
-            <div class="calc-row">
-              <div class="calc-label" style="font-weight:700;color:var(--text);">TOTAL ESTIMATED COMMISSION</div>
-              <div class="calc-val" id="calcTotal" style="font-size:16px;">—</div>
-            </div>
-            <div style="font-size:9px;color:var(--text-muted);margin-top:10px;line-height:1.7;">
-              Commission is earned on close — not on onboarding. Attribution requires Viel's written recognition email before onboarding begins.
-            </div>
-          </div>
+          <div class="scroll-y panel-body" id="attrLog"></div>
         </div>
 
-        <div class="panel">
-          <div class="panel-header">
-            <div class="panel-title">Touchpoint Monitor</div>
-            <div class="panel-meta">FCCO §8.1 — 6-month lapse rule</div>
-          </div>
-          <div class="scroll-y" style="max-height:180px;">
-            <div id="touchpointList">
-              <div class="empty-state">NO INTRODUCTIONS TO MONITOR</div>
-            </div>
-          </div>
-        </div>
-
+        <!-- NON-NEGOTIABLES -->
         <div class="panel">
           <div class="panel-header">
             <div class="panel-title">Non-Negotiables</div>
@@ -452,41 +435,53 @@
   </div>
 </div>
 
-<div id="modal-overlay" role="dialog" aria-modal="true" aria-label="Log Introduction">
+<!-- MODAL: Gate Checklist + Add QC -->
+<div id="modal-overlay" role="dialog" aria-modal="true" aria-label="QC Modal">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="panel-title" id="modalTitle">LOG INTRODUCTION</div>
+      <div class="panel-title" id="modalTitle">QC GATE</div>
       <button class="modal-close" id="modalCloseBtn" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body">
-      <div id="modalMode-addIntro">
-        <div style="font-size:10px;color:var(--text-muted);margin-bottom:16px;line-height:1.7;">
-          A qualifying introduction under FCCO §3.5 must be a named principal who is a direct buyer or supplier — not a broker or middleman. Submit to Viel via email FIRST and receive written recognition before outreach. Your commission depends on the timestamp.
-        </div>
 
+      <!-- Gate Checklist Mode -->
+      <div id="modalMode-checklist">
+        <div id="gateStatusDisplay" class="gate-status fail">⚠ GATE INCOMPLETE</div>
+        <div style="margin-top:12px;">
+          <div class="chk-item" id="chk-kyc"><div class="chk-box">✓</div><div class="chk-label">KYC documents received (trade licence, passport, company profile)</div></div>
+          <div class="chk-item" id="chk-pof"><div class="chk-box">✓</div><div class="chk-label">Proof of funds verified (POF letter or bank statement)</div></div>
+          <div class="chk-item" id="chk-mandate"><div class="chk-box">✓</div><div class="chk-label">Signed mandate / LOI received from counterparty</div></div>
+          <div class="chk-item" id="chk-genuine"><div class="chk-box">✓</div><div class="chk-label">Confirmed principal (not broker/middleman)</div></div>
+          <div class="chk-item" id="chk-pof2"><div class="chk-box">✓</div><div class="chk-label">POF2 / secondary confirmation of capacity received</div></div>
+          <div class="chk-item" id="chk-written"><div class="chk-box">✓</div><div class="chk-label">Written introduction submitted to Viel via email</div></div>
+          <div class="chk-item" id="chk-screen"><div class="chk-box">✓</div><div class="chk-label">Sanctions pre-screen completed (OFAC, UN, EU)</div></div>
+          <div class="chk-item" id="chk-crm"><div class="chk-box">✓</div><div class="chk-label">CRM entry created within 24h of first contact</div></div>
+          <div class="chk-item" id="chk-attr"><div class="chk-box">✓</div><div class="chk-label">Viel written recognition email received (commission protection)</div></div>
+        </div>
+      </div>
+
+      <!-- Add QC Mode -->
+      <div id="modalMode-addQC" style="display:none;">
         <div class="form-grid">
           <div>
-            <div class="f-label">Counterparty Name / Company *</div>
-            <input class="f-input" id="newName" maxlength="120" placeholder="e.g. Addis Ababa Grain Co.">
+            <div class="f-label">Counterparty Name *</div>
+            <input class="f-input" id="newQCName" maxlength="120" placeholder="e.g. Addis Ababa Grain Co.">
           </div>
           <div class="form-row">
             <div>
               <div class="f-label">Commodity *</div>
-              <select class="f-select" id="newCommodity">
+              <select class="f-select" id="newQCCommodity">
                 <option value="">— select —</option>
-                <option value="GOLD">Gold</option>
-                <option value="COFFEE">Coffee</option>
-                <option value="COPPER">Copper</option>
-                <option value="COCOA">Cocoa</option>
-                <option value="SOYBEANS">Soybeans</option>
-                <option value="SUGAR">Sugar</option>
-                <option value="OIL">Oil (WTI/Brent)</option>
-                <option value="OTHER">Other (Schedule E)</option>
+                <option>Gold</option><option>Silver</option><option>Copper</option>
+                <option>WTI Crude Oil</option><option>Brent Crude Oil</option>
+                <option>Wheat</option><option>Corn</option><option>Soybeans</option>
+                <option>Sugar</option><option>Coffee</option><option>Cocoa</option>
+                <option>Other</option>
               </select>
             </div>
             <div>
-              <div class="f-label">Counterparty Type *</div>
-              <select class="f-select" id="newType">
+              <div class="f-label">Type</div>
+              <select class="f-select" id="newQCType">
                 <option value="BUYER">Buyer</option>
                 <option value="SELLER">Seller</option>
                 <option value="BOTH">Both</option>
@@ -494,70 +489,23 @@
             </div>
           </div>
           <div>
-            <div class="f-label">Estimated Deal Value (USD)</div>
-            <input class="f-input" type="number" id="newDealVal" min="0" placeholder="e.g. 500000">
+            <div class="f-label">Attribution</div>
+            <select class="f-select" id="newQCAttrib">
+              <option value="MARIO">Mario</option>
+              <option value="TIMOTHY">Timothy</option>
+              <option value="BOTH">Shared</option>
+            </select>
           </div>
           <div>
-            <div class="f-label">Contact Name &amp; Role at Company</div>
-            <input class="f-input" id="newContact" maxlength="100" placeholder="e.g. Jane Smith, CEO">
-          </div>
-
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:2px solid var(--gold);padding:10px 12px;">
-            <div style="font-size:8px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;">DUAL ATTRIBUTION PROTOCOL §0.4</div>
-            <div style="font-size:9px;color:var(--text-muted);line-height:1.7;">
-              Before ticking the boxes below, confirm the steps:<br>
-              1. Introduction email sent to Viel (with name, company, commodity, contact details)<br>
-              2. Viel has replied with written recognition<br>
-              3. CRM entry created within 24 hours of first contact<br>
-              4. Sanctions pre-screen completed (FCCO §15.1)<br>
-              The recognition email timestamp is the governing document for your commission.
-            </div>
-          </div>
-
-          <div>
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-              <input type="checkbox" id="chkEmailSent" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
-              <span style="font-size:9px;color:var(--text-muted);">Introduction email sent to Viel with counterparty details</span>
-            </label>
-          </div>
-          <div>
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-              <input type="checkbox" id="chkRecognised" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
-              <span style="font-size:9px;color:var(--text-muted);">Viel's written recognition email RECEIVED (commission protection confirmed)</span>
-            </label>
-          </div>
-          <div>
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-              <input type="checkbox" id="chkScreened" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
-              <span style="font-size:9px;color:var(--text-muted);">Sanctions pre-screening completed (FCCO §15.1 — required before submission)</span>
-            </label>
-          </div>
-          <div>
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-              <input type="checkbox" id="chkCRM" style="margin-top:2px;flex-shrink:0;accent-color:var(--gold);">
-              <span style="font-size:9px;color:var(--text-muted);">CRM entry created within 24 hours of first contact</span>
-            </label>
-          </div>
-
-          <div>
-            <div class="f-label">Notes / Source Context</div>
-            <textarea class="f-textarea" id="newNotes" maxlength="500" placeholder="How introduced, relationship context, CRM entry ID…"></textarea>
+            <div class="f-label">Notes</div>
+            <textarea class="f-textarea" id="newQCNotes" maxlength="400" placeholder="Source, context, CRM ID…"></textarea>
           </div>
         </div>
       </div>
 
-      <div id="modalMode-touchpoint" style="display:none;">
-        <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;line-height:1.7;">
-          Log a touchpoint to protect attribution under FCCO §8.1. Attribution lapses after 6 months without documented activity.
-        </div>
-        <div class="f-label">Select Entity</div>
-        <select id="tpEntitySelect" class="f-select" style="margin-bottom:14px; background:#000;"></select>
-        <div class="f-label">Touchpoint Description</div>
-        <textarea class="f-textarea" id="tpDesc" maxlength="400" placeholder="Email sent, call held, updated Viel — brief description…"></textarea>
-      </div>
     </div>
     <div class="modal-footer">
-      <button class="submit-btn" id="modalSaveBtn">SAVE RECORD</button>
+      <button class="submit-btn" id="modalActionBtn">SAVE</button>
       <div class="status-msg" id="modalStatus"></div>
     </div>
   </div>
