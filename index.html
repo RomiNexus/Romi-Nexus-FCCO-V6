@@ -6,215 +6,11 @@
   <title>Romi Nexus | Commercial Dashboard — Timothy Mawonera</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="/favicon.jpg" type="image/jpeg">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://s3.tradingview.com; style-src 'unsafe-hashes' 'sha256-PlwdHEjdrM/ZCex1E81VBwThRgP41lBR64G53QxmB0k=' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-gateway-v6.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; object-src 'none'; frame-ancestors 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://s3.tradingview.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-gateway-v6.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; object-src 'none'; frame-ancestors 'none';">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    :root {
-      --gold:         #D4AF37;
-      --gold-dim:     #a8892a;
-      --gold-hover:   #b5952f;
-      --bg:           #020202;
-      --bg-panel:     #080808;
-      --bg-card:      #0d0d0d;
-      --border:       #1a1a1a;
-      --border-bright:#2a2a2a;
-      --text:         #e8e8e8;
-      --text-muted:   #555;
-      --text-dim:     #333;
-      --success:      #00e676;
-      --warning:      #ffab00;
-      --danger:       #ff1744;
-      --info:         #2979ff;
-      --mono:         'IBM Plex Mono', monospace;
-    }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;min-height:100vh;overflow-x:hidden;}
-
-    /* ── TOP BAR ── */
-    .top-bar{
-      background:#000;border-bottom:1px solid var(--gold);
-      height:42px;display:flex;align-items:center;justify-content:space-between;
-      padding:0 20px;position:sticky;top:0;z-index:1000;
-    }
-    .top-bar-logo{font-size:13px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;}
-    .top-bar-role{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;}
-    .top-bar-right{display:flex;align-items:center;gap:16px;}
-    #clock{font-size:10px;color:var(--text-muted);letter-spacing:1px;}
-    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);animation:pulse 2s infinite;flex-shrink:0;}
-    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
-    .logout-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-muted);font-family:var(--mono);font-size:9px;padding:5px 12px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:.2s;}
-    .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
-
-    /* ── AUTH OVERLAY ── */
-    #authOverlay{position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;}
-    .auth-box{background:var(--bg-panel);border:1px solid var(--border-bright);border-top:2px solid var(--gold);width:360px;padding:32px;}
-    .auth-logo{font-size:18px;font-weight:700;color:var(--gold);letter-spacing:4px;margin-bottom:4px;}
-    .auth-sub{font-size:9px;color:var(--text-muted);letter-spacing:2px;margin-bottom:28px;}
-    .auth-label{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
-    .auth-input{width:100%;background:var(--bg);border:1px solid var(--border-bright);color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 12px;outline:none;transition:.2s;}
-    .auth-input:focus{border-color:var(--gold);}
-    .auth-btn{width:100%;background:var(--gold);color:#000;border:none;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:12px;cursor:pointer;transition:.2s;margin-top:16px;}
-    .auth-btn:hover{background:var(--gold-hover);}
-    .auth-btn:disabled{background:var(--text-dim);cursor:not-allowed;}
-    .auth-msg{font-size:10px;margin-top:10px;min-height:18px;text-align:center;}
-    .auth-msg.err{color:var(--danger);}
-    .auth-msg.ok{color:var(--success);}
-    .auth-msg.info{color:var(--warning);}
-    .auth-step{display:none;}
-    .auth-step.active{display:block;}
-
-    /* ── MAIN ── */
-    #appShell{display:none;}
-    .dash-wrap{max-width:1280px;margin:0 auto;padding:20px 16px;}
-
-    /* ── ALERT BANNER ── */
-    .alert-banner{border-left:3px solid var(--warning);background:#0d0b00;padding:10px 16px;font-size:10px;color:var(--warning);letter-spacing:.5px;margin-bottom:16px;display:none;}
-    .alert-banner.show{display:block;}
-
-    /* ── KPI HEADER ── */
-    .dash-header{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:16px;}
-    .dh-cell{background:var(--bg-panel);padding:18px 16px;}
-    .dh-label{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
-    .dh-val{font-size:24px;font-weight:700;color:var(--gold);letter-spacing:-0.5px;line-height:1;}
-    .dh-val.warn{color:var(--warning);}
-    .dh-val.danger{color:var(--danger);}
-    .dh-val.success{color:var(--success);}
-    .dh-sub{font-size:9px;color:var(--text-muted);margin-top:4px;}
-    .progress-wrap{height:3px;background:var(--border);margin-top:10px;}
-    /* CSP FIX: progress bar width is set via --bar-width CSS variable from JS
-       using el.style.setProperty('--bar-width', n+'%') which is CSP-safe */
-    .progress-fill{height:100%;background:var(--gold);width:var(--bar-width, 0%);transition:width .6s;}
-    .progress-fill.warn{background:var(--warning);}
-    .progress-fill.danger{background:var(--danger);}
-    .progress-fill.success{background:var(--success);}
-
-    /* ── TWO COL ── */
-    .two-col{display:grid;grid-template-columns:1fr 380px;gap:12px;margin-bottom:12px;}
-    @media(max-width:900px){.two-col{grid-template-columns:1fr;}}
-
-    /* ── PANEL ── */
-    .panel{background:var(--bg-panel);border:1px solid var(--border);}
-    .panel-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#0a0a0a;}
-    .panel-title{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
-    .panel-title::before{content:'[';}
-    .panel-title::after{content:']';}
-    .panel-title::before,.panel-title::after{color:var(--text-muted);}
-    .panel-meta{font-size:9px;color:var(--text-muted);letter-spacing:.5px;}
-    .panel-body{padding:14px;}
-
-    /* ── QC TABLE ── */
-    .qc-table{width:100%;border-collapse:collapse;}
-    .qc-table th{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;}
-    .qc-table td{padding:8px 8px;border-bottom:1px solid var(--border);font-size:10px;vertical-align:middle;}
-    .qc-table tr:last-child td{border-bottom:none;}
-    .qc-table tr:hover td{background:#0d0d0d;}
-    .stage-badge{display:inline-block;font-size:8px;letter-spacing:1px;padding:2px 6px;text-transform:uppercase;font-weight:700;background:#111;color:var(--text-muted);}
-    .stage-badge.stage-1{background:#001233;color:var(--info);}
-    .stage-badge.stage-2{background:#1a1000;color:var(--warning);}
-    .stage-badge.stage-3{background:#001a0d;color:var(--success);}
-    .gate-pass{color:var(--success);font-size:9px;font-weight:700;}
-    .gate-fail{color:var(--danger);font-size:9px;font-weight:700;}
-    .gate-na{color:var(--text-muted);font-size:9px;}
-    .attr-badge{display:inline-block;font-size:8px;letter-spacing:1px;padding:2px 6px;text-transform:uppercase;font-weight:700;}
-    .attr-timothy{background:#001a0d;color:var(--success);}
-    .attr-mario{background:#0d0010;color:#c97fff;}
-    .attr-shared{background:#001233;color:var(--info);}
-
-    /* ── WEEK GRID ── */
-    .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px;}
-    .day-block{background:var(--bg-card);border:1px solid var(--border);padding:8px 4px;text-align:center;font-size:9px;color:var(--text-dim);min-height:36px;display:flex;align-items:center;justify-content:center;}
-    .day-block.filled{background:#001a0d;border-color:#2a5c00;color:var(--success);}
-    .day-block.target{background:#0d0a00;border-color:#5c4400;color:var(--warning);}
-    .day-block.today{border-color:var(--gold);}
-
-    /* ── HOURS LOG ── */
-    .log-entry{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);gap:8px;}
-    .log-entry:last-child{border-bottom:none;}
-    .log-desc{font-size:10px;color:var(--text);margin-bottom:2px;}
-    .log-meta{font-size:9px;color:var(--text-muted);}
-    .log-hours{font-size:11px;font-weight:700;color:var(--gold);white-space:nowrap;}
-
-    /* ── MILESTONE ── */
-    .gate-status{font-size:9px;padding:6px 10px;margin-top:10px;font-weight:700;letter-spacing:.5px;}
-    .gate-status.pass{background:#001a0d;color:var(--success);}
-    .gate-status.fail{background:#1a0007;color:var(--danger);}
-
-    /* ── CHECKLIST ── */
-    .chk-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
-    .chk-item:last-child{border-bottom:none;}
-    .chk-box{width:14px;height:14px;border:1px solid var(--border-bright);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--success);}
-    .chk-item.checked .chk-box{background:var(--success);border-color:var(--success);color:#000;}
-    .chk-label{font-size:9px;color:var(--text-muted);line-height:1.5;}
-    .chk-item.checked .chk-label{color:var(--text);}
-
-    /* ── MODAL ADD QC ── */
-    .f-label{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
-    .f-input,.f-select,.f-textarea{width:100%;background:var(--bg);border:1px solid var(--border-bright);color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 10px;outline:none;transition:.2s;}
-    .f-input:focus,.f-select:focus,.f-textarea:focus{border-color:var(--gold);}
-    .f-textarea{min-height:60px;resize:vertical;}
-    .f-select option{background:var(--bg);}
-    .form-grid{display:grid;gap:10px;}
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-    .submit-btn{background:var(--gold);color:#000;border:none;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px;cursor:pointer;transition:.2s;width:100%;}
-    .submit-btn:hover{background:var(--gold-hover);}
-    .submit-btn:disabled{background:var(--text-dim);cursor:not-allowed;}
-    .action-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-muted);font-family:var(--mono);font-size:8px;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s;}
-    .action-btn:hover{border-color:var(--gold);color:var(--gold);}
-
-    /* ── ATTR LOG ── */
-    .attr-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px;}
-    .attr-row:last-child{border-bottom:none;}
-    .attr-name{font-size:10px;color:var(--text);}
-    .attr-detail{font-size:9px;color:var(--text-muted);margin-top:2px;}
-
-    /* ── SCROLL ── */
-    .scroll-y{overflow-y:auto;max-height:340px;}
-    .scroll-y::-webkit-scrollbar{width:4px;}
-    .scroll-y::-webkit-scrollbar-track{background:var(--bg);}
-    .scroll-y::-webkit-scrollbar-thumb{background:var(--border-bright);}
-
-    /* ── MODAL ── */
-    #modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;display:none;align-items:center;justify-content:center;}
-    #modal-overlay.open{display:flex;}
-    .modal-box{background:var(--bg-panel);border:1px solid var(--border-bright);border-top:2px solid var(--gold);width:500px;max-height:90vh;overflow-y:auto;}
-    .modal-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#0a0a0a;position:sticky;top:0;}
-    .modal-close{background:transparent;border:none;color:var(--text-muted);font-family:var(--mono);font-size:16px;cursor:pointer;line-height:1;}
-    .modal-close:hover{color:var(--danger);}
-    .modal-body{padding:16px;}
-    .modal-footer{padding:14px 16px;border-top:1px solid var(--border);background:#0a0a0a;}
-
-    /* ── JS-DRIVEN CLASS REPLACEMENTS (CSP-safe) ──
-       fcco.js sets className instead of el.style.* for all layout.
-       These rules provide the visual equivalent. */
-    .js-flex-gap4{display:flex;gap:4px;}
-    .js-row-between{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-    .js-wrap-border{padding:6px 0;border-bottom:1px solid var(--border);}
-    .js-milestone-label{font-size:9px;color:var(--text-muted);letter-spacing:.5px;}
-    .js-milestone-right{display:flex;align-items:center;gap:8px;}
-    .js-milestone-tgt{font-size:9px;color:var(--text-muted);}
-    .js-milestone-badge{font-size:8px;padding:2px 8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
-    .js-milestone-ontrack{background:#001a0d;color:var(--success);}
-    .js-milestone-behind{background:#1a0007;color:var(--danger);}
-    .js-milestone-upcoming{background:#0d0a00;color:var(--warning);}
-    .js-log-meta{font-size:9px;color:var(--text-muted);}
-
-    /* ── MISC ── */
-    .empty-state{padding:24px;text-align:center;color:var(--text-dim);font-size:10px;letter-spacing:1px;}
-    .status-msg{font-size:10px;min-height:18px;margin-top:8px;text-align:center;}
-    .status-msg.ok{color:var(--success);}
-    .status-msg.err{color:var(--danger);}
-    .status-msg.info{color:var(--warning);}
-    .divider-line{height:1px;background:var(--border);margin:10px 0;}
-
-    @media(max-width:700px){
-      .dash-header{grid-template-columns:1fr 1fr;}
-      .form-row{grid-template-columns:1fr;}
-    }
-    @media(max-width:480px){.dash-header{grid-template-columns:1fr;}}
-  </style>
+  <link rel="stylesheet" href="/css/fcco.css">
 </head>
 <body>
 
@@ -258,7 +54,7 @@
 
     <div class="alert-banner" id="alertBanner"></div>
 
-    <!-- KPI HEADER — IDs match fcco.js refreshKPIs() -->
+    <!-- KPI HEADER -->
     <div class="dash-header">
       <div class="dh-cell">
         <div class="dh-label">QC Gates Passed</div>
@@ -289,10 +85,10 @@
       <div>
 
         <!-- QC PIPELINE TABLE -->
-        <div class="panel" style="margin-bottom:12px;">
+        <div class="panel mb12">
           <div class="panel-header">
             <div class="panel-title">QC Pipeline</div>
-            <div class="js-flex-gap4" style="align-items:center;">
+            <div class="js-flex-gap4 align-center">
               <div class="panel-meta" id="qcCount">0 counterparties</div>
               <button class="action-btn" id="addQCBtn">+ ADD</button>
             </div>
@@ -316,8 +112,8 @@
           </div>
         </div>
 
-        <!-- HOURS LOG -->
-        <div class="panel" style="margin-bottom:12px;">
+        <!-- HOURS LOG FORM -->
+        <div class="panel mb12">
           <div class="panel-header">
             <div class="panel-title">Hours Log</div>
             <div class="panel-meta">MOU §3.2 — 35h/week minimum</div>
@@ -358,7 +154,7 @@
         </div>
 
         <!-- WEEK GRID -->
-        <div class="panel" style="margin-bottom:12px;">
+        <div class="panel mb12">
           <div class="panel-header">
             <div class="panel-title">Week at a Glance</div>
             <div class="panel-meta">Mon – Sun</div>
@@ -379,7 +175,8 @@
 
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:12px;">
+      <!-- RIGHT COLUMN -->
+      <div class="right-col">
 
         <!-- MILESTONE TRACKER -->
         <div class="panel">
@@ -408,23 +205,23 @@
             <div class="panel-meta">FCCO v4.6</div>
           </div>
           <div class="panel-body">
-            <div style="font-size:9px;color:var(--text-muted);line-height:2;">
-              <span style="color:var(--danger);">&#x2717;</span> Do NOT discuss SAFE terms, valuation, or equity<br>
-              <span style="color:var(--danger);">&#x2717;</span> Do NOT co-pitch or present to investors (Viel only)<br>
-              <span style="color:var(--danger);">&#x2717;</span> Do NOT guarantee acceptance to any prospect<br>
-              <span style="color:var(--danger);">&#x2717;</span> Do NOT introduce brokers or middlemen — principals only<br>
-              <span style="color:var(--danger);">&#x2717;</span> Do NOT use any title other than Schedule B approved wording<br>
-              <span style="color:var(--success);">&#x2713;</span> Log all outreach in CRM within 24 hours<br>
-              <span style="color:var(--success);">&#x2713;</span> Submit intro to Viel via email BEFORE outreach<br>
-              <span style="color:var(--success);">&#x2713;</span> Pre-screen all prospects (sanctions) before submitting<br>
-              <span style="color:var(--success);">&#x2713;</span> Maintain 6-monthly touchpoints per introduced counterparty<br>
-              <span style="color:var(--success);">&#x2713;</span> Weekly KPI report to Viel every Friday by 5pm
+            <div class="nonneg-list">
+              <span class="nonneg-no">&#x2717;</span> Do NOT discuss SAFE terms, valuation, or equity<br>
+              <span class="nonneg-no">&#x2717;</span> Do NOT co-pitch or present to investors (Viel only)<br>
+              <span class="nonneg-no">&#x2717;</span> Do NOT guarantee acceptance to any prospect<br>
+              <span class="nonneg-no">&#x2717;</span> Do NOT introduce brokers or middlemen — principals only<br>
+              <span class="nonneg-no">&#x2717;</span> Do NOT use any title other than Schedule B approved wording<br>
+              <span class="nonneg-yes">&#x2713;</span> Log all outreach in CRM within 24 hours<br>
+              <span class="nonneg-yes">&#x2713;</span> Submit intro to Viel via email BEFORE outreach<br>
+              <span class="nonneg-yes">&#x2713;</span> Pre-screen all prospects (sanctions) before submitting<br>
+              <span class="nonneg-yes">&#x2713;</span> Maintain 6-monthly touchpoints per introduced counterparty<br>
+              <span class="nonneg-yes">&#x2713;</span> Weekly KPI report to Viel every Friday by 5pm
             </div>
             <div class="divider-line"></div>
-            <div style="font-size:9px;color:var(--text-muted);line-height:1.7;">
-              <strong style="color:var(--text);">Approved LinkedIn Title:</strong><br>
+            <div class="nonneg-title-block">
+              <strong class="nonneg-title-label">Approved LinkedIn Title:</strong><br>
               &ldquo;Fractional Chief Commercial Officer, Romi Group F.Z.C — Independent Commercial Consultant&rdquo;<br>
-              <span style="color:var(--danger);">Deviation = breach of FCCO §2.4</span>
+              <span class="nonneg-breach">Deviation = breach of FCCO §2.4</span>
             </div>
           </div>
         </div>
@@ -447,7 +244,7 @@
       <!-- Gate Checklist Mode -->
       <div id="modalMode-checklist">
         <div id="gateStatusDisplay" class="gate-status fail">⚠ GATE INCOMPLETE</div>
-        <div style="margin-top:12px;">
+        <div class="mt12">
           <div class="chk-item" id="chk-kyc"><div class="chk-box">✓</div><div class="chk-label">KYC documents received (trade licence, passport, company profile)</div></div>
           <div class="chk-item" id="chk-pof"><div class="chk-box">✓</div><div class="chk-label">Proof of funds verified (POF letter or bank statement)</div></div>
           <div class="chk-item" id="chk-mandate"><div class="chk-box">✓</div><div class="chk-label">Signed mandate / LOI received from counterparty</div></div>
@@ -461,7 +258,7 @@
       </div>
 
       <!-- Add QC Mode -->
-      <div id="modalMode-addQC" style="display:none;">
+      <div id="modalMode-addQC" class="hidden">
         <div class="form-grid">
           <div>
             <div class="f-label">Counterparty Name *</div>
