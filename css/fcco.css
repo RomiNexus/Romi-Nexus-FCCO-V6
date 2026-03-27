@@ -1,7 +1,6 @@
 /* ============================================================
-   ROMI NEXUS — FCCO DASHBOARD v1.2
-   All styles extracted from index.html to satisfy CSP style-src 'self'
-   NO inline style= attributes remain in the HTML.
+   ROMI NEXUS — FCCO DASHBOARD v1.3
+   External stylesheet — no inline styles in HTML (CSP style-src 'self')
    ============================================================ */
 
 :root {
@@ -27,11 +26,7 @@
 body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;min-height:100vh;overflow-x:hidden;}
 
 /* ── TOP BAR ── */
-.top-bar{
-  background:#000;border-bottom:1px solid var(--gold);
-  height:42px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;position:sticky;top:0;z-index:1000;
-}
+.top-bar{background:#000;border-bottom:1px solid var(--gold);height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:1000;}
 .top-bar-logo{font-size:13px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;}
 .top-bar-role{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;}
 .top-bar-right{display:flex;align-items:center;gap:16px;}
@@ -40,6 +35,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
 .logout-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-muted);font-family:var(--mono);font-size:9px;padding:5px 12px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:.2s;}
 .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+/* DIFC Art.17 — Clear Data button */
+.clear-data-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-dim);font-family:var(--mono);font-size:8px;padding:4px 10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:.2s;}
+.clear-data-btn:hover{border-color:var(--danger);color:var(--danger);}
 
 /* ── AUTH OVERLAY ── */
 #authOverlay{position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;}
@@ -59,6 +58,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12
 .auth-step{display:none;}
 .auth-step.active{display:block;}
 
+/* DIFC DPL 2020 Art.10 — Data notice */
+.data-notice{margin-top:20px;padding:10px 12px;border:1px solid var(--border);border-left:2px solid var(--text-dim);font-size:8px;color:var(--text-dim);line-height:1.6;letter-spacing:.3px;}
+
 /* ── MAIN SHELL ── */
 #appShell{display:none;}
 .dash-wrap{max-width:1280px;margin:0 auto;padding:20px 16px;}
@@ -77,18 +79,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12
 .dh-val.success{color:var(--success);}
 .dh-sub{font-size:9px;color:var(--text-muted);margin-top:4px;}
 .progress-wrap{height:3px;background:var(--border);margin-top:10px;}
-/* Progress bar width driven via CSS custom property set by JS:
-   el.style.setProperty('--bar-width', n+'%') — CSP-safe */
+/* Width driven by JS: el.style.setProperty('--bar-width', n+'%') — CSP-safe */
 .progress-fill{height:100%;background:var(--gold);width:var(--bar-width, 0%);transition:width .6s;}
 .progress-fill.warn{background:var(--warning);}
 .progress-fill.danger{background:var(--danger);}
 .progress-fill.success{background:var(--success);}
 
-/* ── TWO COL LAYOUT ── */
+/* ── LAYOUT ── */
 .two-col{display:grid;grid-template-columns:1fr 380px;gap:12px;margin-bottom:12px;}
 @media(max-width:900px){.two-col{grid-template-columns:1fr;}}
-
-/* right column stacks its children vertically */
 .right-col{display:flex;flex-direction:column;gap:12px;}
 
 /* ── PANEL ── */
@@ -101,12 +100,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12
 .panel-meta{font-size:9px;color:var(--text-muted);letter-spacing:.5px;}
 .panel-body{padding:14px;}
 
-/* ── UTILITY SPACING ── */
+/* ── UTILITIES ── */
 .mb12{margin-bottom:12px;}
 .mt12{margin-top:12px;}
 .align-center{align-items:center;}
-
-/* ── HIDDEN ── */
 .hidden{display:none;}
 
 /* ── QC TABLE ── */
@@ -154,7 +151,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12
 .chk-label{font-size:9px;color:var(--text-muted);line-height:1.5;}
 .chk-item.checked .chk-label{color:var(--text);}
 
-/* ── MODAL ADD QC FORM ── */
+/* ── FORM ── */
 .f-label{font-size:8px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
 .f-input,.f-select,.f-textarea{width:100%;background:var(--bg);border:1px solid var(--border-bright);color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 10px;outline:none;transition:.2s;}
 .f-input:focus,.f-select:focus,.f-textarea:focus{border-color:var(--gold);}
@@ -182,7 +179,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12
 .nonneg-title-label{color:var(--text);}
 .nonneg-breach{color:var(--danger);}
 
-/* ── SCROLLBAR ── */
+/* ── SCROLL ── */
 .scroll-y{overflow-y:auto;max-height:340px;}
 .scroll-y::-webkit-scrollbar{width:4px;}
 .scroll-y::-webkit-scrollbar-track{background:var(--bg);}
@@ -198,8 +195,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12
 .modal-body{padding:16px;}
 .modal-footer{padding:14px 16px;border-top:1px solid var(--border);background:#0a0a0a;}
 
-/* ── JS-DRIVEN CLASS REPLACEMENTS (CSP-safe) ──
-   fcco.js sets className instead of el.style.* for all layout. */
+/* ── JS CLASS REPLACEMENTS (CSP-safe, no el.style.*) ── */
 .js-flex-gap4{display:flex;gap:4px;}
 .js-row-between{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .js-wrap-border{padding:6px 0;border-bottom:1px solid var(--border);}
@@ -220,8 +216,5 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12
 .status-msg.info{color:var(--warning);}
 .divider-line{height:1px;background:var(--border);margin:10px 0;}
 
-@media(max-width:700px){
-  .dash-header{grid-template-columns:1fr 1fr;}
-  .form-row{grid-template-columns:1fr;}
-}
+@media(max-width:700px){.dash-header{grid-template-columns:1fr 1fr;}.form-row{grid-template-columns:1fr;}}
 @media(max-width:480px){.dash-header{grid-template-columns:1fr;}}

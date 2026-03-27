@@ -6,9 +6,21 @@
   <title>Romi Nexus | Commercial Dashboard — Timothy Mawonera</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="/favicon.jpg" type="image/jpeg">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://s3.tradingview.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-gateway-v6.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; object-src 'none'; frame-ancestors 'none';">
+  <!--
+    CSP v1.3 — OWASP + DIFC hardened:
+    - cdnjs.cloudflare.com REMOVED (was unused, broadened script-src attack surface)
+    - style-src 'self' only (no unsafe-inline, no unsafe-hashes)
+    - frame-ancestors 'none' (clickjacking)
+    - object-src 'none'
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://s3.tradingview.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-gateway-v6.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; object-src 'none'; frame-ancestors 'none';">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!--
+    SRI note: Google Fonts dynamically generates CSS per user-agent,
+    so a static integrity hash is not compatible with the Fonts API.
+    The CSP style-src already restricts to fonts.googleapis.com only.
+  -->
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/fcco.css">
 </head>
@@ -34,6 +46,13 @@
       <button class="auth-btn" id="verifyOtpBtn">VERIFY &amp; ENTER</button>
       <div class="auth-msg" id="authMsg2"></div>
     </div>
+
+    <!-- DIFC DPL 2020 — Data processing notice (Art. 10 transparency) -->
+    <div class="data-notice">
+      This tool processes professional activity data under the FCCO MOU (contractual basis).
+      Data is stored encrypted on this device only and automatically purged after 90 days.
+      You may delete all local data at any time via the dashboard.
+    </div>
   </div>
 </div>
 
@@ -46,6 +65,7 @@
     <div class="top-bar-right">
       <div class="status-dot"></div>
       <div id="clock"></div>
+      <button class="clear-data-btn" id="clearDataBtn" title="Delete all local data (DIFC Art.17 — Right to Erasure)">CLEAR DATA</button>
       <button class="logout-btn" id="logoutBtn">LOGOUT</button>
     </div>
   </div>

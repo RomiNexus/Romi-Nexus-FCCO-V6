@@ -1,15 +1,22 @@
 'use strict';
 // ============================================================
-// ROMI NEXUS — FCCO DASHBOARD v1.2
-// CSP FIX v1.1: replaced bar.style.width with setProperty(--bar-width)
-// WHITE PAGE FIX v1.2:
-//   - appShell shown BEFORE authOverlay hidden (no white flash on error)
-//   - bootApp() wrapped in try/catch so any render error shows a message
-//     instead of blank page
-//   - initDateField() guarded with null-check
+// ROMI NEXUS — FCCO DASHBOARD v1.3
+// OWASP + DIFC DPL 2020 HARDENING
+//
+// v1.1 — CSP: bar width via CSS custom property
+// v1.2 — White page fix: show shell first, try/catch bootApp
+// v1.3 — Compliance hardening:
+//   [OWASP A04 / DIFC Art.19] localStorage encrypted via AES-GCM,
+//     key derived from session CSRF token (HKDF-SHA-256)
+//   [DIFC Art.5]  90-day TTL: records older than 90d auto-purged on boot
+//   [DIFC Art.17] deleteAllData() — right to erasure, bound to UI button
+//   [OWASP A06]   cdnjs removed from CSP entirely (was unused)
+//   [DIFC Notice] data processing notice shown at auth screen
+//   Modal show/hide via classList only (no style.display — CSP clean)
 // ============================================================
 
 const API_URL = 'https://rominexus-gateway-v6.vacorp-inquiries.workers.dev';
+const DATA_TTL_DAYS = 90;
 
 function sanitize(str) {
   return String(str || '')
@@ -18,6 +25,109 @@ function sanitize(str) {
     .replace(/>/g,  '&gt;')
     .replace(/"/g,  '&quot;')
     .replace(/'/g,  '&#x27;');
+}
+
+// ============================================================
+// ── ENCRYPTED localStorage (OWASP A04 / DIFC Art.19) ──
+// Key is derived fresh each session from the CSRF token via HKDF.
+// Data at rest is AES-GCM encrypted — unreadable without the key.
+// Falls back to plain JSON read on decryption failure (migration).
+// ============================================================
+let _cryptoKey = null;
+
+async function deriveCryptoKey(csrf) {
+  const enc     = new TextEncoder();
+  const rawKey  = enc.encode(csrf);
+  const baseKey = await crypto.subtle.importKey('raw', rawKey, 'HKDF', false, ['deriveKey']);
+  _cryptoKey = await crypto.subtle.deriveKey(
+    { name:'HKDF', hash:'SHA-256', salt: enc.encode('rn-fcco-v1'), info: enc.encode('localStorage') },
+    baseKey,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['encrypt','decrypt']
+  );
+}
+
+async function encryptData(obj) {
+  if (!_cryptoKey) return JSON.stringify(obj);
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const enc  = new TextEncoder();
+  const ct   = await crypto.subtle.encrypt({name:'AES-GCM', iv}, _cryptoKey, enc.encode(JSON.stringify(obj)));
+  const buf  = new Uint8Array(iv.length + ct.byteLength);
+  buf.set(iv, 0);
+  buf.set(new Uint8Array(ct), iv.length);
+  return btoa(String.fromCharCode(...buf));
+}
+
+async function decryptData(raw, def) {
+  if (!_cryptoKey || !raw) return def;
+  try {
+    // Try encrypted path first
+    const buf  = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+    const iv   = buf.slice(0, 12);
+    const ct   = buf.slice(12);
+    const pt   = await crypto.subtle.decrypt({name:'AES-GCM', iv}, _cryptoKey, ct);
+    return JSON.parse(new TextDecoder().decode(pt));
+  } catch(_) {
+    // Fallback: legacy plain JSON (migration path)
+    try { return JSON.parse(raw); } catch(_2) { return def; }
+  }
+}
+
+// Async wrappers — all callers await these
+async function getLocalData(key, def) {
+  try {
+    const raw = localStorage.getItem('rn_mario_' + key);
+    if (!raw) return def;
+    return await decryptData(raw, def);
+  } catch(_) { return def; }
+}
+async function setLocalData(key, val) {
+  try {
+    const enc = await encryptData(val);
+    localStorage.setItem('rn_mario_' + key, enc);
+  } catch(_) {}
+}
+
+// ── DIFC Art.5 — 90-day TTL purge ──
+// Runs once on boot. Removes hours_log entries and qc_list entries
+// whose creation timestamp is older than DATA_TTL_DAYS days.
+async function purgeStaledData() {
+  const cutoff = Date.now() - DATA_TTL_DAYS * 86400000;
+
+  const hours = await getLocalData('hours_log', []);
+  const freshHours = hours.filter(e => {
+    const t = e.ts ? new Date(e.ts).getTime() : new Date(e.date).getTime();
+    return t >= cutoff;
+  });
+  if (freshHours.length !== hours.length) await setLocalData('hours_log', freshHours);
+
+  const qc = await getLocalData('qc_list', []);
+  const freshQC = qc.filter(e => {
+    const t = e.addedAt ? new Date(e.addedAt).getTime() : Date.now();
+    return t >= cutoff;
+  });
+  if (freshQC.length !== qc.length) await setLocalData('qc_list', freshQC);
+
+  const attr = await getLocalData('attr_log', []);
+  const freshAttr = attr.filter(e => {
+    const t = e.ts ? new Date(e.ts).getTime() : Date.now();
+    return t >= cutoff;
+  });
+  if (freshAttr.length !== attr.length) await setLocalData('attr_log', freshAttr);
+}
+
+// ── DIFC Art.17 — Right to Erasure ──
+async function deleteAllData() {
+  if (!confirm('DELETE ALL LOCAL DATA?\n\nThis will permanently erase all hours logs, counterparty records, and attribution data stored on this device.\n\nThis action cannot be undone.')) return;
+  try {
+    ['hours_log','qc_list','attr_log'].forEach(k => localStorage.removeItem('rn_mario_' + k));
+    clearSession();
+    alert('All local data deleted. You will now be logged out.');
+    location.reload();
+  } catch(e) {
+    alert('Error deleting data: ' + e.message);
+  }
 }
 
 // ── Session state ──
@@ -47,16 +157,6 @@ function clearSession() {
     sessionStorage.removeItem('rn_mario_csrf');
     sessionStorage.removeItem('rn_mario_name');
   } catch(_) {}
-}
-
-function getLocalData(key, def) {
-  try {
-    const raw = localStorage.getItem('rn_mario_' + key);
-    return raw ? JSON.parse(raw) : def;
-  } catch(_) { return def; }
-}
-function setLocalData(key, val) {
-  try { localStorage.setItem('rn_mario_' + key, JSON.stringify(val)); } catch(_) {}
 }
 
 // ── Auth ──
@@ -108,6 +208,8 @@ async function verifyOTP() {
     _csrf = csrf;
     _name = data.name || _email;
     setSession(_email, _csrf, _name);
+    // Derive encryption key from CSRF before booting app
+    await deriveCryptoKey(_csrf);
     bootApp();
   } catch(e) { setAuthMsg(2, 'NETWORK ERROR — RETRY', 'err'); document.getElementById('verifyOtpBtn').disabled=false; }
 }
@@ -127,16 +229,13 @@ function setAuthMsg(step, msg, cls) {
 
 function logout() {
   clearSession();
+  _cryptoKey = null;
   location.reload();
 }
 
 // ── Boot ──
-// WHITE PAGE FIX: show appShell FIRST, hide authOverlay SECOND.
-// If any render function throws, the shell is already visible so
-// the user sees the dashboard frame rather than a blank page.
 function bootApp() {
   try {
-    // 1. Reveal shell before hiding overlay — prevents white flash on any error
     const shell   = document.getElementById('appShell');
     const overlay = document.getElementById('authOverlay');
     if (shell)   shell.style.display   = 'block';
@@ -149,15 +248,17 @@ function bootApp() {
     if (nameEl) nameEl.textContent = _name || _email;
 
     initDateField();
-    refreshKPIs();
-    renderWeekGrid();
-    renderHoursLog();
-    renderQCTable();
-    renderMilestoneTracker();
-    renderAttrLog();
-    checkAlerts();
+    // All render functions are now async — run sequentially
+    purgeStaledData().then(() => {
+      refreshKPIs();
+      renderWeekGrid();
+      renderHoursLog();
+      renderQCTable();
+      renderMilestoneTracker();
+      renderAttrLog();
+      checkAlerts();
+    });
   } catch(err) {
-    // Surface errors visibly instead of going white
     const shell = document.getElementById('appShell');
     if (shell) {
       shell.style.display = 'block';
@@ -173,7 +274,7 @@ function bootApp() {
 
 function initDateField() {
   const el = document.getElementById('logDate');
-  if (!el) return;   // guard — el may not exist if HTML changes
+  if (!el) return;
   const d = new Date();
   el.value = d.getFullYear() + '-' +
     String(d.getMonth()+1).padStart(2,'0') + '-' +
@@ -181,9 +282,9 @@ function initDateField() {
 }
 
 // ── KPIs ──
-function refreshKPIs() {
-  const qcList    = getLocalData('qc_list',    []);
-  const hoursLog  = getLocalData('hours_log',  []);
+async function refreshKPIs() {
+  const qcList    = await getLocalData('qc_list',    []);
+  const hoursLog  = await getLocalData('hours_log',  []);
 
   const qcPassed  = qcList.filter(q => q.gateStatus === 'PASS').length;
   const qcPct     = Math.min(100, Math.round((qcPassed / 20) * 100));
@@ -203,52 +304,45 @@ function refreshKPIs() {
     qcEl.textContent = qcPassed;
     qcEl.className   = 'dh-val ' + (qcPassed >= 18 ? 'success' : qcPassed >= 10 ? '' : qcPassed < 5 ? 'danger' : 'warn');
   }
-
   const qcBar = document.getElementById('kpiQCBar');
   if (qcBar) {
     qcBar.style.setProperty('--bar-width', qcPct + '%');
     qcBar.className = 'progress-fill ' + (qcPassed >= 18 ? '' : qcPassed < 5 ? 'danger' : 'warn');
   }
-
   const hEl = document.getElementById('kpiHours');
   if (hEl) {
     hEl.textContent = weekHours.toFixed(1) + 'h';
     hEl.className   = 'dh-val ' + (weekHours >= 35 ? 'success' : weekHours >= 25 ? 'warn' : 'danger');
   }
-
   const hBar = document.getElementById('kpiHoursBar');
   if (hBar) {
     hBar.style.setProperty('--bar-width', hoursPct + '%');
     hBar.className = 'progress-fill ' + (weekHours >= 35 ? '' : weekHours >= 20 ? 'warn' : 'danger');
   }
-
   const dEl = document.getElementById('kpiDays');
   if (dEl) {
     dEl.textContent = days;
     dEl.className   = 'dh-val ' + (days > 30 ? '' : days > 14 ? 'warn' : 'danger');
   }
-
   const pEl = document.getElementById('kpiPipeline');
   if (pEl) {
     pEl.textContent = pipeline;
     pEl.className   = 'dh-val ' + (pipeline >= 3 ? '' : 'warn');
   }
-
   const totalH = hoursLog.reduce((s,e) => s + (parseFloat(e.hours)||0), 0);
   const ttEl = document.getElementById('totalHoursAllTime');
   if (ttEl) ttEl.textContent = 'Total: ' + totalH.toFixed(1) + 'h logged';
-
   const wcEl = document.getElementById('weekTotal');
   if (wcEl) wcEl.textContent = weekHours.toFixed(1) + 'h / 35h min';
 }
 
 function calcWeekHours(log) {
-  const now   = new Date();
-  const day   = now.getDay();
-  const mon   = new Date(now);
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now);
   mon.setDate(now.getDate() - ((day + 6) % 7));
   mon.setHours(0,0,0,0);
-  const sun   = new Date(mon);
+  const sun = new Date(mon);
   sun.setDate(mon.getDate() + 7);
   return log.reduce((s, e) => {
     const d = new Date(e.date);
@@ -261,30 +355,29 @@ function calcDayHours(log, isoDate) {
 }
 
 // ── Week Grid ──
-function renderWeekGrid() {
-  const log   = getLocalData('hours_log', []);
-  const grid  = document.getElementById('weekGrid');
+async function renderWeekGrid() {
+  const log  = await getLocalData('hours_log', []);
+  const grid = document.getElementById('weekGrid');
   if (!grid) return;
   grid.innerHTML = '';
-  const now  = new Date();
-  const day  = now.getDay();
-  const mon  = new Date(now);
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now);
   mon.setDate(now.getDate() - ((day + 6) % 7));
   mon.setHours(0,0,0,0);
-
   for (let i = 0; i < 7; i++) {
     const d   = new Date(mon);
     d.setDate(mon.getDate() + i);
     const iso = d.getFullYear() + '-' +
       String(d.getMonth()+1).padStart(2,'0') + '-' +
       String(d.getDate()).padStart(2,'0');
-    const hrs = calcDayHours(log, iso);
+    const hrs     = calcDayHours(log, iso);
     const isToday = iso === todayISO();
     const block   = document.createElement('div');
     block.className = 'day-block' +
       (hrs >= 5 ? ' filled' : hrs > 0 ? ' target' : '') +
-      (isToday   ? ' today'  : '');
-    block.title = iso + ' — ' + hrs.toFixed(1) + 'h';
+      (isToday ? ' today' : '');
+    block.title       = iso + ' — ' + hrs.toFixed(1) + 'h';
     block.textContent = hrs > 0 ? hrs.toFixed(0) + 'h' : (isToday ? '●' : '');
     grid.appendChild(block);
   }
@@ -304,10 +397,10 @@ async function submitHoursLog() {
   const activity = document.getElementById('logActivity').value;
   const desc     = (document.getElementById('logDesc').value || '').trim();
 
-  if (!date) { setStatus('logStatus', 'DATE REQUIRED', 'err'); return; }
-  if (hours <= 0 || hours > 16) { setStatus('logStatus', 'HOURS MUST BE 0.5–16', 'err'); return; }
-  if (!activity) { setStatus('logStatus', 'SELECT ACTIVITY TYPE', 'err'); return; }
-  if (!desc || desc.length < 5) { setStatus('logStatus', 'DESCRIPTION REQUIRED (min 5 chars)', 'err'); return; }
+  if (!date)                         { setStatus('logStatus', 'DATE REQUIRED', 'err'); return; }
+  if (hours <= 0 || hours > 16)      { setStatus('logStatus', 'HOURS MUST BE 0.5–16', 'err'); return; }
+  if (!activity)                     { setStatus('logStatus', 'SELECT ACTIVITY TYPE', 'err'); return; }
+  if (!desc || desc.length < 5)      { setStatus('logStatus', 'DESCRIPTION REQUIRED (min 5 chars)', 'err'); return; }
 
   document.getElementById('logSubmitBtn').disabled = true;
   setStatus('logStatus', 'SAVING…', 'info');
@@ -321,9 +414,9 @@ async function submitHoursLog() {
     ts:       new Date().toISOString(),
   };
 
-  const log = getLocalData('hours_log', []);
+  const log = await getLocalData('hours_log', []);
   log.unshift(entry);
-  setLocalData('hours_log', log);
+  await setLocalData('hours_log', log);
 
   document.getElementById('logHours').value    = '';
   document.getElementById('logActivity').value = '';
@@ -336,8 +429,8 @@ async function submitHoursLog() {
   renderHoursLog();
 }
 
-function renderHoursLog() {
-  const log = getLocalData('hours_log', []);
+async function renderHoursLog() {
+  const log = await getLocalData('hours_log', []);
   const el  = document.getElementById('hoursLogList');
   if (!el) return;
   el.innerHTML = '';
@@ -349,9 +442,8 @@ function renderHoursLog() {
     return;
   }
   log.slice(0, 50).forEach(e => {
-    const row = document.createElement('div');
+    const row  = document.createElement('div');
     row.className = 'log-entry';
-
     const left = document.createElement('div');
     const desc = document.createElement('div');
     desc.className   = 'log-desc';
@@ -361,11 +453,9 @@ function renderHoursLog() {
     meta.textContent = (e.activity || '').replace(/_/g,' ') + ' · ' + e.date;
     left.appendChild(desc);
     left.appendChild(meta);
-
     const right = document.createElement('div');
     right.className   = 'log-hours';
     right.textContent = e.hours + 'h';
-
     row.appendChild(left);
     row.appendChild(right);
     el.appendChild(row);
@@ -373,143 +463,122 @@ function renderHoursLog() {
 }
 
 // ── QC Pipeline ──
-function renderQCTable() {
-  const list = getLocalData('qc_list', []);
+async function renderQCTable() {
+  const list = await getLocalData('qc_list', []);
   const body = document.getElementById('qcTableBody');
   if (!body) return;
   const countEl = document.getElementById('qcCount');
   if (countEl) countEl.textContent = list.length + ' counterpart' + (list.length===1?'y':'ies');
-
   if (!list.length) {
     body.innerHTML = '<tr><td colspan="6"><div class="empty-state">NO COUNTERPARTIES — ADD YOUR FIRST</div></td></tr>';
     return;
   }
   body.innerHTML = '';
   list.forEach((q, idx) => {
-    const tr = document.createElement('tr');
-
+    const tr     = document.createElement('tr');
     const tdName = document.createElement('td');
     tdName.textContent = q.name;
-
     const tdComm = document.createElement('td');
     tdComm.textContent = q.commodity || '—';
-
-    const tdStage = document.createElement('td');
+    const tdStage    = document.createElement('td');
     const stageBadge = document.createElement('span');
-    const stageMap = ['PENDING','DOCS IN','SCREENED','SUBMITTED'];
-    stageBadge.className = 'stage-badge stage-' + (q.stage||0);
+    const stageMap   = ['PENDING','DOCS IN','SCREENED','SUBMITTED'];
+    stageBadge.className  = 'stage-badge stage-' + (q.stage||0);
     stageBadge.textContent = stageMap[q.stage||0] || 'PENDING';
     tdStage.appendChild(stageBadge);
-
     const tdGate = document.createElement('td');
     const gateEl = document.createElement('span');
     gateEl.className   = q.gateStatus === 'PASS' ? 'gate-pass' : q.gateStatus === 'FAIL' ? 'gate-fail' : 'gate-na';
     gateEl.textContent = q.gateStatus === 'PASS' ? '✓ PASS' : q.gateStatus === 'FAIL' ? '✗ FAIL' : '— PENDING';
     tdGate.appendChild(gateEl);
-
-    const tdAttr = document.createElement('td');
-    const attrBadge = document.createElement('span');
-    attrBadge.className = 'attr-badge ' + (q.attribution === 'TIMOTHY' ? 'attr-timothy' : 'attr-mario');
+    const tdAttr     = document.createElement('td');
+    const attrBadge  = document.createElement('span');
+    attrBadge.className  = 'attr-badge ' + (q.attribution === 'TIMOTHY' ? 'attr-timothy' : 'attr-mario');
     attrBadge.textContent = q.attribution === 'TIMOTHY' ? 'TIMOTHY' : 'MARIO';
     tdAttr.appendChild(attrBadge);
-
-    const tdAct = document.createElement('td');
+    const tdAct  = document.createElement('td');
     tdAct.className = 'js-flex-gap4';
-
     const gateBtn = document.createElement('button');
     gateBtn.className   = 'action-btn';
     gateBtn.textContent = 'GATE';
     gateBtn.onclick     = () => openGateChecklist(idx);
-
     const advBtn = document.createElement('button');
     advBtn.className   = 'action-btn';
     advBtn.textContent = 'ADVANCE';
     advBtn.onclick     = () => advanceStage(idx);
     if ((q.stage||0) >= 3) advBtn.disabled = true;
-
     tdAct.appendChild(gateBtn);
     tdAct.appendChild(advBtn);
-
-    tr.appendChild(tdName);
-    tr.appendChild(tdComm);
-    tr.appendChild(tdStage);
-    tr.appendChild(tdGate);
-    tr.appendChild(tdAttr);
-    tr.appendChild(tdAct);
+    tr.appendChild(tdName); tr.appendChild(tdComm); tr.appendChild(tdStage);
+    tr.appendChild(tdGate); tr.appendChild(tdAttr); tr.appendChild(tdAct);
     body.appendChild(tr);
   });
 }
 
-function advanceStage(idx) {
-  const list = getLocalData('qc_list', []);
+async function advanceStage(idx) {
+  const list = await getLocalData('qc_list', []);
   if (!list[idx]) return;
   if ((list[idx].stage||0) < 3) {
     list[idx].stage = (list[idx].stage||0) + 1;
-    setLocalData('qc_list', list);
+    await setLocalData('qc_list', list);
     renderQCTable();
     refreshKPIs();
     renderAttrLog();
   }
 }
 
-// ── Add QC Modal ──
-let _modalMode = 'checklist';
+// ── Modal — show/hide via classList (no style.display, CSP clean) ──
+let _modalMode  = 'checklist';
 let _modalQCIdx = -1;
 
 function openAddQC() {
   _modalMode = 'addQC';
-  document.getElementById('modalTitle').textContent = 'ADD COUNTERPARTY';
-  document.getElementById('modalMode-checklist').style.display = 'none';
-  document.getElementById('modalMode-addQC').style.display     = 'block';
-  document.getElementById('modalActionBtn').textContent = 'ADD TO PIPELINE';
-  document.getElementById('newQCName').value     = '';
-  document.getElementById('newQCNotes').value    = '';
-  document.getElementById('modalStatus').textContent = '';
+  document.getElementById('modalTitle').textContent      = 'ADD COUNTERPARTY';
+  document.getElementById('modalMode-checklist').classList.add('hidden');
+  document.getElementById('modalMode-addQC').classList.remove('hidden');
+  document.getElementById('modalActionBtn').textContent  = 'ADD TO PIPELINE';
+  document.getElementById('newQCName').value             = '';
+  document.getElementById('newQCNotes').value            = '';
+  document.getElementById('modalStatus').textContent     = '';
   document.getElementById('modal-overlay').classList.add('open');
 }
 
-function openGateChecklist(idx) {
+async function openGateChecklist(idx) {
   _modalMode  = 'checklist';
   _modalQCIdx = idx;
-  const list  = getLocalData('qc_list', []);
+  const list  = await getLocalData('qc_list', []);
   const q     = list[idx] || {};
-  document.getElementById('modalTitle').textContent = 'QC GATE — ' + (q.name || '');
-  document.getElementById('modalMode-checklist').style.display = 'block';
-  document.getElementById('modalMode-addQC').style.display     = 'none';
-  document.getElementById('modalActionBtn').textContent = 'SAVE GATE STATUS';
-  document.getElementById('modalStatus').textContent = '';
-
+  document.getElementById('modalTitle').textContent      = 'QC GATE — ' + (q.name || '');
+  document.getElementById('modalMode-checklist').classList.remove('hidden');
+  document.getElementById('modalMode-addQC').classList.add('hidden');
+  document.getElementById('modalActionBtn').textContent  = 'SAVE GATE STATUS';
+  document.getElementById('modalStatus').textContent     = '';
   const chks = ['kyc','pof','mandate','genuine','pof2','written','screen','crm','attr'];
   const saved = q.checklist || {};
   chks.forEach(k => {
     const el = document.getElementById('chk-' + k);
     if (!el) return;
-    if (saved[k]) { el.classList.add('checked'); }
-    else { el.classList.remove('checked'); }
+    el.classList.toggle('checked', !!saved[k]);
   });
   updateGateStatus();
   document.getElementById('modal-overlay').classList.add('open');
 }
 
-function toggleChk(el, id) {
+function toggleChk(el) {
   el.classList.toggle('checked');
   updateGateStatus();
 }
 
 function updateGateStatus() {
-  const chks   = ['kyc','pof','mandate','genuine','pof2','written','screen','crm','attr'];
-  const passed = chks.filter(k => {
-    const el = document.getElementById('chk-' + k);
-    return el && el.classList.contains('checked');
-  }).length;
-  const total  = chks.length;
-  const allPass = passed === total;
-  const disp   = document.getElementById('gateStatusDisplay');
+  const chks    = ['kyc','pof','mandate','genuine','pof2','written','screen','crm','attr'];
+  const passed  = chks.filter(k => { const el = document.getElementById('chk-'+k); return el && el.classList.contains('checked'); }).length;
+  const allPass = passed === chks.length;
+  const disp    = document.getElementById('gateStatusDisplay');
   if (disp) {
-    disp.className = 'gate-status ' + (allPass ? 'pass' : 'fail');
+    disp.className   = 'gate-status ' + (allPass ? 'pass' : 'fail');
     disp.textContent = allPass
       ? '✓ GATE PASSED — READY TO SUBMIT TO VIEL'
-      : '⚠ GATE INCOMPLETE — ' + passed + ' OF ' + total + ' ITEMS CONFIRMED';
+      : '⚠ GATE INCOMPLETE — ' + passed + ' OF ' + chks.length + ' ITEMS CONFIRMED';
   }
 }
 
@@ -518,70 +587,45 @@ function closeModal() {
   _modalQCIdx = -1;
 }
 
-function modalAction() {
+async function modalAction() {
   if (_modalMode === 'addQC') {
-    const name   = (document.getElementById('newQCName').value || '').trim();
-    const comm   = document.getElementById('newQCCommodity').value;
-    const type   = document.getElementById('newQCType').value;
-    const attr   = document.getElementById('newQCAttrib').value;
-    const notes  = (document.getElementById('newQCNotes').value || '').trim().substring(0, 400);
-
+    const name  = (document.getElementById('newQCName').value || '').trim();
+    const comm  = document.getElementById('newQCCommodity').value;
+    const type  = document.getElementById('newQCType').value;
+    const attr  = document.getElementById('newQCAttrib').value;
+    const notes = (document.getElementById('newQCNotes').value || '').trim().substring(0, 400);
     if (!name || name.length < 2) { setStatus('modalStatus','NAME REQUIRED','err'); return; }
-    if (!comm) { setStatus('modalStatus','SELECT COMMODITY','err'); return; }
-
-    const list  = getLocalData('qc_list', []);
-    list.push({
-      id:          Date.now().toString(36),
-      name,
-      commodity:   comm,
-      type,
-      attribution: attr,
-      notes,
-      stage:       0,
-      gateStatus:  'PENDING',
-      checklist:   {},
-      addedAt:     new Date().toISOString(),
-    });
-    setLocalData('qc_list', list);
-
-    const attrLog = getLocalData('attr_log', []);
-    attrLog.unshift({
-      name,
-      attr,
-      commodity: comm,
-      ts: new Date().toISOString(),
-      note: 'Added to pipeline',
-    });
-    setLocalData('attr_log', attrLog);
-
+    if (!comm)                    { setStatus('modalStatus','SELECT COMMODITY','err'); return; }
+    const list = await getLocalData('qc_list', []);
+    list.push({ id: Date.now().toString(36), name, commodity: comm, type, attribution: attr,
+      notes, stage: 0, gateStatus: 'PENDING', checklist: {}, addedAt: new Date().toISOString() });
+    await setLocalData('qc_list', list);
+    const attrLog = await getLocalData('attr_log', []);
+    attrLog.unshift({ name, attr, commodity: comm, ts: new Date().toISOString(), note: 'Added to pipeline' });
+    await setLocalData('attr_log', attrLog);
     setStatus('modalStatus','✓ ADDED — ENSURE CRM ENTRY CREATED WITHIN 24H','ok');
     setTimeout(closeModal, 1500);
-    renderQCTable();
-    refreshKPIs();
-    renderMilestoneTracker();
-    renderAttrLog();
+    renderQCTable(); refreshKPIs(); renderMilestoneTracker(); renderAttrLog();
 
   } else if (_modalMode === 'checklist') {
-    const chks  = ['kyc','pof','mandate','genuine','pof2','written','screen','crm','attr'];
+    const chks = ['kyc','pof','mandate','genuine','pof2','written','screen','crm','attr'];
     const state = {};
-    let   passed = 0;
+    let passed = 0;
     chks.forEach(k => {
       const el = document.getElementById('chk-' + k);
       if (el && el.classList.contains('checked')) { state[k]=true; passed++; }
-      else state[k]=false;
+      else state[k] = false;
     });
-    const list = getLocalData('qc_list', []);
+    const list = await getLocalData('qc_list', []);
     if (list[_modalQCIdx]) {
       list[_modalQCIdx].checklist   = state;
       list[_modalQCIdx].gateStatus  = (passed === chks.length) ? 'PASS' : 'FAIL';
       list[_modalQCIdx].gateUpdated = new Date().toISOString();
-      setLocalData('qc_list', list);
+      await setLocalData('qc_list', list);
     }
     setStatus('modalStatus', passed === chks.length ? '✓ GATE PASSED' : '⚠ GATE NOT YET COMPLETE', passed === chks.length ? 'ok' : 'err');
     setTimeout(closeModal, 1200);
-    renderQCTable();
-    refreshKPIs();
-    renderMilestoneTracker();
+    renderQCTable(); refreshKPIs(); renderMilestoneTracker();
   }
 }
 
@@ -595,57 +639,36 @@ const MILESTONES = [
   { label: 'KPI hard deadline', date: '2026-06-30', target: 20 },
 ];
 
-function renderMilestoneTracker() {
-  const qcList = getLocalData('qc_list', []);
+async function renderMilestoneTracker() {
+  const qcList = await getLocalData('qc_list', []);
   const passed = qcList.filter(q => q.gateStatus === 'PASS').length;
   const el     = document.getElementById('milestoneTracker');
   if (!el) return;
   el.innerHTML = '';
   const today  = new Date(); today.setHours(0,0,0,0);
-
   MILESTONES.forEach(m => {
-    const mDate  = new Date(m.date);
-    mDate.setHours(0,0,0,0);
+    const mDate  = new Date(m.date); mDate.setHours(0,0,0,0);
     const isPast = mDate < today;
     const hit    = passed >= m.target;
-
-    const wrap  = document.createElement('div');
-    wrap.className = 'js-wrap-border';
-
-    const row = document.createElement('div');
-    row.className = 'js-row-between';
-
-    const label = document.createElement('div');
-    label.className   = 'js-milestone-label';
+    const wrap   = document.createElement('div'); wrap.className = 'js-wrap-border';
+    const row    = document.createElement('div'); row.className  = 'js-row-between';
+    const label  = document.createElement('div'); label.className = 'js-milestone-label';
     label.textContent = m.label + ' (' + m.date + ')';
-
-    const right = document.createElement('div');
-    right.className = 'js-milestone-right';
-
-    const tgt = document.createElement('div');
-    tgt.className   = 'js-milestone-tgt';
+    const right  = document.createElement('div'); right.className = 'js-milestone-right';
+    const tgt    = document.createElement('div'); tgt.className   = 'js-milestone-tgt';
     tgt.textContent = passed + '/' + m.target;
-
-    const badge = document.createElement('div');
-    badge.className = 'js-milestone-badge ' + (
-      hit     ? 'js-milestone-ontrack' :
-      isPast  ? 'js-milestone-behind'  :
-                'js-milestone-upcoming'
-    );
+    const badge  = document.createElement('div');
+    badge.className  = 'js-milestone-badge ' + (hit ? 'js-milestone-ontrack' : isPast ? 'js-milestone-behind' : 'js-milestone-upcoming');
     badge.textContent = hit ? '✓ ON TRACK' : isPast ? '✗ BEHIND' : '— UPCOMING';
-
-    right.appendChild(tgt);
-    right.appendChild(badge);
-    row.appendChild(label);
-    row.appendChild(right);
-    wrap.appendChild(row);
-    el.appendChild(wrap);
+    right.appendChild(tgt); right.appendChild(badge);
+    row.appendChild(label); row.appendChild(right);
+    wrap.appendChild(row); el.appendChild(wrap);
   });
 }
 
 // ── Attribution Log ──
-function renderAttrLog() {
-  const log = getLocalData('attr_log', []);
+async function renderAttrLog() {
+  const log = await getLocalData('attr_log', []);
   const el  = document.getElementById('attrLog');
   if (!el) return;
   el.innerHTML = '';
@@ -657,46 +680,33 @@ function renderAttrLog() {
     return;
   }
   log.slice(0, 30).forEach(e => {
-    const row  = document.createElement('div');
-    row.className = 'attr-row';
-
-    const left = document.createElement('div');
-    const name = document.createElement('div');
-    name.className   = 'attr-name';
-    name.textContent = e.name;
-    const detail = document.createElement('div');
-    detail.className   = 'attr-detail';
+    const row    = document.createElement('div'); row.className = 'attr-row';
+    const left   = document.createElement('div');
+    const name   = document.createElement('div'); name.className = 'attr-name'; name.textContent = e.name;
+    const detail = document.createElement('div'); detail.className = 'attr-detail';
     detail.textContent = (e.commodity || '') + ' · ' + new Date(e.ts).toLocaleDateString();
-    left.appendChild(name);
-    left.appendChild(detail);
-
+    left.appendChild(name); left.appendChild(detail);
     const badge = document.createElement('div');
-    badge.className = 'attr-badge ' + (e.attr==='TIMOTHY' ? 'attr-timothy' : e.attr==='BOTH' ? 'attr-shared' : 'attr-mario');
+    badge.className  = 'attr-badge ' + (e.attr==='TIMOTHY' ? 'attr-timothy' : e.attr==='BOTH' ? 'attr-shared' : 'attr-mario');
     badge.textContent = e.attr;
-
-    row.appendChild(left);
-    row.appendChild(badge);
-    el.appendChild(row);
+    row.appendChild(left); row.appendChild(badge); el.appendChild(row);
   });
 }
 
 // ── Alerts ──
-function checkAlerts() {
-  const hoursLog = getLocalData('hours_log', []);
+async function checkAlerts() {
+  const hoursLog = await getLocalData('hours_log', []);
   const weekH    = calcWeekHours(hoursLog);
   const today    = new Date();
   const isFri    = today.getDay() === 5;
   const banner   = document.getElementById('alertBanner');
-
   const alerts   = [];
   if (weekH < 20 && today.getDay() >= 3) alerts.push('⚠ HOURS BELOW 20h THIS WEEK — TARGET IS 35h (MOU §3.2)');
   if (isFri) alerts.push('⚠ FRIDAY — KPI REPORT DUE TO VIEL BY 5PM');
-
-  const qcList  = getLocalData('qc_list', []);
+  const qcList  = await getLocalData('qc_list', []);
   const qcP     = qcList.filter(q => q.gateStatus === 'PASS').length;
-  const daysLeft= Math.max(0, Math.round((new Date('2026-06-30') - today) / 86400000));
+  const daysLeft = Math.max(0, Math.round((new Date('2026-06-30') - today) / 86400000));
   if (daysLeft < 30 && qcP < 15) alerts.push('⚠ CRITICAL — ' + (20-qcP) + ' QC STILL NEEDED WITH ' + daysLeft + ' DAYS LEFT');
-
   if (alerts.length && banner) {
     banner.textContent = alerts.join('  ·  ');
     banner.classList.add('show');
@@ -736,14 +746,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.querySelector('.logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', logout);
 
+  const clearBtn = document.getElementById('clearDataBtn');
+  if (clearBtn) clearBtn.addEventListener('click', deleteAllData);
+
   const logSubmitBtn = document.getElementById('logSubmitBtn');
   if (logSubmitBtn) logSubmitBtn.addEventListener('click', submitHoursLog);
 
-  // Bind the "+ ADD" button by ID — safer than querySelectorAll text match
   const addQCBtn = document.getElementById('addQCBtn');
   if (addQCBtn) addQCBtn.addEventListener('click', openAddQC);
 
-  const modalCloseBtn = document.querySelector('.modal-close');
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
   if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
 
   const modalActionBtn = document.getElementById('modalActionBtn');
@@ -754,22 +766,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === this) closeModal();
   });
 
-  const chks = ['kyc', 'pof', 'mandate', 'genuine', 'pof2', 'written', 'screen', 'crm', 'attr'];
+  const chks = ['kyc','pof','mandate','genuine','pof2','written','screen','crm','attr'];
   chks.forEach(k => {
     const el = document.getElementById('chk-' + k);
-    if (el) {
-      el.addEventListener('click', function() {
-        toggleChk(this, 'chk-' + k);
-      });
-    }
+    if (el) el.addEventListener('click', function() { toggleChk(this); });
   });
 });
 
 // ── Init ──
-(function init() {
+(async function init() {
   const s = getSession();
   if (s.email && s.csrf) {
     _email = s.email; _csrf = s.csrf; _name = s.name;
+    await deriveCryptoKey(_csrf);
     bootApp();
   }
 })();
