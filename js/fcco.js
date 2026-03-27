@@ -1,13 +1,14 @@
 'use strict';
 // ============================================================
-// ROMI NEXUS — MARIO DASHBOARD v1.0
+// ROMI NEXUS — FCCO DASHBOARD v1.0
 // SECURITY: OWASP A03 — all untrusted data via textContent
 //           OWASP A07 — session token in sessionStorage
 //           OWASP A01 — server-side auth; role enforced backend
 //           Input sanitization before any API submission
 // ============================================================
 
-const API_URL = 'rominexus-gateway-v6.vacorp-inquiries.workers.dev';
+// FIX: was missing https:// — caused POST to relative path on mawops domain
+const API_URL = 'https://rominexus-gateway-v6.vacorp-inquiries.workers.dev';
 
 function sanitize(str) {
   return String(str || '')
@@ -316,8 +317,9 @@ function renderHoursLog() {
     desc.className   = 'log-desc';
     desc.textContent = e.desc;
     const meta = document.createElement('div');
-    meta.className   = 'log-meta';
-    meta.style.color = 'var(--text-muted)';
+    // FIX: was meta.style.color = ... which violates CSP style-src
+    // Now uses a CSS class instead
+    meta.className   = 'log-meta js-log-meta';
     meta.textContent = (e.activity || '').replace(/_/g,' ') + ' · ' + e.date;
     left.appendChild(desc);
     left.appendChild(meta);
@@ -373,8 +375,8 @@ function renderQCTable() {
     tdAttr.appendChild(attrBadge);
 
     const tdAct = document.createElement('td');
-    tdAct.style.display = 'flex';
-    tdAct.style.gap     = '4px';
+    // FIX: was tdAct.style.display='flex'; tdAct.style.gap='4px'; — violates CSP
+    tdAct.className = 'js-flex-gap4';
 
     const gateBtn = document.createElement('button');
     gateBtn.className   = 'action-btn';
@@ -565,42 +567,37 @@ function renderMilestoneTracker() {
     mDate.setHours(0,0,0,0);
     const isPast = mDate < today;
     const hit    = passed >= m.target;
-    const row    = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
+
+    // FIX: replaced all el.style.cssText assignments with className-based approach
+    const wrap  = document.createElement('div');
+    wrap.className = 'js-wrap-border';
+
+    const row = document.createElement('div');
+    row.className = 'js-row-between';
 
     const label = document.createElement('div');
-    label.style.cssText = 'font-size:9px;color:var(--text-muted);letter-spacing:.5px;';
-    label.textContent   = m.label + ' (' + m.date + ')';
+    label.className   = 'js-milestone-label';
+    label.textContent = m.label + ' (' + m.date + ')';
 
     const right = document.createElement('div');
-    right.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    right.className = 'js-milestone-right';
 
     const tgt = document.createElement('div');
-    tgt.style.cssText = 'font-size:9px;color:var(--text-muted);';
-    tgt.textContent   = passed + '/' + m.target;
+    tgt.className   = 'js-milestone-tgt';
+    tgt.textContent = passed + '/' + m.target;
 
     const badge = document.createElement('div');
-    badge.style.cssText = 'font-size:8px;padding:2px 8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;';
-    if (hit) {
-      badge.style.background = '#001a0d';
-      badge.style.color      = 'var(--success)';
-      badge.textContent      = '✓ ON TRACK';
-    } else if (isPast) {
-      badge.style.background = '#1a0007';
-      badge.style.color      = 'var(--danger)';
-      badge.textContent      = '✗ BEHIND';
-    } else {
-      badge.style.background = '#0d0a00';
-      badge.style.color      = 'var(--warning)';
-      badge.textContent      = '— UPCOMING';
-    }
+    badge.className = 'js-milestone-badge ' + (
+      hit     ? 'js-milestone-ontrack' :
+      isPast  ? 'js-milestone-behind'  :
+                'js-milestone-upcoming'
+    );
+    badge.textContent = hit ? '✓ ON TRACK' : isPast ? '✗ BEHIND' : '— UPCOMING';
+
     right.appendChild(tgt);
     right.appendChild(badge);
     row.appendChild(label);
     row.appendChild(right);
-
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--border);';
     wrap.appendChild(row);
     el.appendChild(wrap);
   });
@@ -655,9 +652,9 @@ function checkAlerts() {
   if (isFri) alerts.push('⚠ FRIDAY — KPI REPORT DUE TO VIEL BY 5PM');
 
   const qcList  = getLocalData('qc_list', []);
-  const passed  = qcList.filter(q => q.gateStatus === 'PASS').length;
+  const qcP     = qcList.filter(q => q.gateStatus === 'PASS').length;
   const daysLeft= Math.max(0, Math.round((new Date('2026-06-30') - today) / 86400000));
-  if (daysLeft < 30 && passed < 15) alerts.push('⚠ CRITICAL — ' + (20-passed) + ' QC STILL NEEDED WITH ' + daysLeft + ' DAYS LEFT');
+  if (daysLeft < 30 && qcP < 15) alerts.push('⚠ CRITICAL — ' + (20-qcP) + ' QC STILL NEEDED WITH ' + daysLeft + ' DAYS LEFT');
 
   if (alerts.length) {
     banner.textContent = alerts.join('  ·  ');
@@ -689,21 +686,18 @@ updateClock();
 // ── CSP EVENT BINDINGS (F-06 / OWASP HARDENING) ──
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Auth Bindings
   const sendOtpBtn = document.getElementById('sendOtpBtn');
   if (sendOtpBtn) sendOtpBtn.addEventListener('click', sendOTP);
 
   const verifyOtpBtn = document.getElementById('verifyOtpBtn');
   if (verifyOtpBtn) verifyOtpBtn.addEventListener('click', verifyOTP);
 
-  // 2. Global Bindings
   const logoutBtn = document.querySelector('.logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', logout);
 
   const logSubmitBtn = document.getElementById('logSubmitBtn');
   if (logSubmitBtn) logSubmitBtn.addEventListener('click', submitHoursLog);
 
-  // Find the "+ ADD" QC Pipeline button dynamically
   const actionBtns = document.querySelectorAll('.action-btn');
   actionBtns.forEach(btn => {
     if (btn.textContent.trim() === '+ ADD') {
@@ -711,21 +705,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 3. Modal Bindings
   const modalCloseBtn = document.querySelector('.modal-close');
   if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
 
   const modalActionBtn = document.getElementById('modalActionBtn');
   if (modalActionBtn) modalActionBtn.addEventListener('click', modalAction);
 
-  // 4. Modal overlay close — moved inside DOMContentLoaded to guarantee DOM is ready
-  // Fix: was at module scope, which throws if script loads before DOM is parsed
   const overlay = document.getElementById('modal-overlay');
   if (overlay) overlay.addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
 
-  // 5. QC Quality Gate Checkboxes
   const chks = ['kyc', 'pof', 'mandate', 'genuine', 'pof2', 'written', 'screen', 'crm', 'attr'];
   chks.forEach(k => {
     const el = document.getElementById('chk-' + k);
