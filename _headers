@@ -1,0 +1,12 @@
+# Cloudflare Pages — HTTP Response Headers
+# Applied at the CDN edge level on every response.
+#
+# frame-ancestors MUST be an HTTP header — browsers ignore it in <meta> CSP tags (W3C spec).
+# X-Frame-Options is the legacy fallback for older browsers that don't support frame-ancestors.
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Content-Security-Policy: frame-ancestors 'none'

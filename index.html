@@ -7,13 +7,14 @@
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="/favicon.jpg" type="image/jpeg">
   <!--
-    CSP v1.3 — OWASP + DIFC hardened:
-    - cdnjs.cloudflare.com REMOVED (was unused, broadened script-src attack surface)
-    - style-src 'self' only (no unsafe-inline, no unsafe-hashes)
-    - frame-ancestors 'none' (clickjacking)
+    CSP v1.4 — OWASP + DIFC hardened:
+    - frame-ancestors REMOVED from <meta> — browsers ignore it here (W3C spec).
+      It is now enforced via the _headers file at HTTP response header level.
+    - cdnjs.cloudflare.com removed (unused, broad attack surface)
+    - style-src 'self' + fonts.googleapis.com only
     - object-src 'none'
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://s3.tradingview.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-gateway-v6.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; object-src 'none'; frame-ancestors 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://s3.tradingview.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-gateway-v6.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; object-src 'none';">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <!--
