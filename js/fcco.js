@@ -7,7 +7,7 @@
 //           Input sanitization before any API submission
 // ============================================================
 
-const API_URL = 'https://rominexus-proxy.vacorp-inquiries.workers.dev';
+const API_URL = 'rominexus-gateway-v6.vacorp-inquiries.workers.dev';
 
 function sanitize(str) {
   return String(str || '')
