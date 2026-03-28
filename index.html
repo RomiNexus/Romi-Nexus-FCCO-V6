@@ -7,21 +7,18 @@
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="/favicon.jpg" type="image/jpeg">
   <!--
-    CSP v1.4 — OWASP + DIFC hardened:
-    - frame-ancestors REMOVED from <meta> — browsers ignore it here (W3C spec).
-      It is now enforced via the _headers file at HTTP response header level.
-    - cdnjs.cloudflare.com removed (unused, broad attack surface)
-    - style-src 'self' + fonts.googleapis.com only
+    CSP v1.5 — OWASP + DIFC hardened:
+    - cdnjs.cloudflare.com re-added to script-src for CryptoJS + DOMPurify (ISSUE-11)
+    - frame-ancestors enforced via _headers file (HTTP header level)
     - object-src 'none'
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://s3.tradingview.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-gateway-v6.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; object-src 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://s3.tradingview.com https://cdnjs.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://rominexus-gateway-v6.vacorp-inquiries.workers.dev https://*.tradingview.com wss://*.tradingview.com; img-src 'self' data: https://*.tradingview.com; object-src 'none';">
+
+  <!-- ISSUE-11: Security Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.0/crypto-js.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <!--
-    SRI note: Google Fonts dynamically generates CSS per user-agent,
-    so a static integrity hash is not compatible with the Fonts API.
-    The CSP style-src already restricts to fonts.googleapis.com only.
-  -->
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/fcco.css">
 </head>
@@ -329,6 +326,20 @@
   </div>
 </div>
 
+<!-- ISSUE-11: Security Modules -->
+<script src="/js/security/auditLogger.js"></script>
+<script src="/js/security/inputValidator.js"></script>
+<script src="/js/security/encryption.js"></script>
+<script src="/js/security/cspHeaders.js"></script>
+<script src="/js/security/amlKyc.js"></script>
+<script src="/js/security/dataRetention.js"></script>
 <script src="/js/fcco.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof initializeSecurityMeasures === 'function') {
+      initializeSecurityMeasures();
+    }
+  });
+</script>
 </body>
 </html>
