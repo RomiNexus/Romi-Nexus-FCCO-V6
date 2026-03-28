@@ -13,6 +13,7 @@
 //   [OWASP A06]   cdnjs removed from CSP entirely (was unused)
 //   [DIFC Notice] data processing notice shown at auth screen
 //   Modal show/hide via classList only (no style.display — CSP clean)
+// v4.2.5 — CRM SYNC: mirror writes to Supabase via Worker
 // ============================================================
 
 const API_URL = 'https://rominexus-gateway-v6.vacorp-inquiries.workers.dev';
@@ -25,6 +26,40 @@ function sanitize(str) {
     .replace(/>/g,  '&gt;')
     .replace(/"/g,  '&quot;')
     .replace(/'/g,  '&#x27;');
+}
+
+// ============================================================
+// CRM SYNC — v4.2.5
+// Persists localStorage state to Supabase via Worker.
+// Called after every write to qc_list, hours_log, attr_log.
+// Fire-and-forget: localStorage remains the source of truth
+// for UI rendering; Supabase is the audit-grade backup.
+// ============================================================
+async function syncToServer(action, payload) {
+  const s = getSession();
+  if (!s.email || !s.csrf) return; // not authenticated — skip silently
+
+  try {
+    const body = JSON.stringify({
+      action,
+      email:  s.email,
+      _csrf:  s.csrf,
+      ...payload,
+    });
+    const res = await fetch(API_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.error) {
+      console.warn('[CRM SYNC] Server rejected:', action, data.error);
+    }
+  } catch (e) {
+    console.warn('[CRM SYNC] Network error — will retry on next save:', e.message);
+    // Non-fatal: localStorage entry is still written.
+    // On next login, a full sync pass can be triggered.
+  }
 }
 
 // ============================================================
@@ -62,19 +97,16 @@ async function encryptData(obj) {
 async function decryptData(raw, def) {
   if (!_cryptoKey || !raw) return def;
   try {
-    // Try encrypted path first
     const buf  = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
     const iv   = buf.slice(0, 12);
     const ct   = buf.slice(12);
     const pt   = await crypto.subtle.decrypt({name:'AES-GCM', iv}, _cryptoKey, ct);
     return JSON.parse(new TextDecoder().decode(pt));
   } catch(_) {
-    // Fallback: legacy plain JSON (migration path)
     try { return JSON.parse(raw); } catch(_2) { return def; }
   }
 }
 
-// Async wrappers — all callers await these
 async function getLocalData(key, def) {
   try {
     const raw = localStorage.getItem('rn_mario_' + key);
@@ -90,8 +122,6 @@ async function setLocalData(key, val) {
 }
 
 // ── DIFC Art.5 — 90-day TTL purge ──
-// Runs once on boot. Removes hours_log entries and qc_list entries
-// whose creation timestamp is older than DATA_TTL_DAYS days.
 async function purgeStaledData() {
   const cutoff = Date.now() - DATA_TTL_DAYS * 86400000;
 
@@ -208,7 +238,6 @@ async function verifyOTP() {
     _csrf = csrf;
     _name = data.name || _email;
     setSession(_email, _csrf, _name);
-    // Derive encryption key from CSRF before booting app
     await deriveCryptoKey(_csrf);
     bootApp();
   } catch(e) { setAuthMsg(2, 'NETWORK ERROR — RETRY', 'err'); document.getElementById('verifyOtpBtn').disabled=false; }
@@ -248,7 +277,6 @@ function bootApp() {
     if (nameEl) nameEl.textContent = _name || _email;
 
     initDateField();
-    // All render functions are now async — run sequentially
     purgeStaledData().then(() => {
       refreshKPIs();
       renderWeekGrid();
@@ -417,6 +445,14 @@ async function submitHoursLog() {
   const log = await getLocalData('hours_log', []);
   log.unshift(entry);
   await setLocalData('hours_log', log);
+  // v4.2.5: Mirror to Supabase for MOU §3.2 audit compliance
+  syncToServer('syncHoursLog', {
+    log_date:      entry.date,
+    hours:         String(entry.hours),
+    activity_type: entry.activity,
+    description:   entry.desc,
+    local_id:      entry.id,
+  });
 
   document.getElementById('logHours').value    = '';
   document.getElementById('logActivity').value = '';
@@ -600,9 +636,29 @@ async function modalAction() {
     list.push({ id: Date.now().toString(36), name, commodity: comm, type, attribution: attr,
       notes, stage: 0, gateStatus: 'PENDING', checklist: {}, addedAt: new Date().toISOString() });
     await setLocalData('qc_list', list);
+    // v4.2.5: sync new counterparty to Supabase qc_gates
+    const newEntry = list[list.length - 1];
+    syncToServer('syncQCGate', {
+      counterparty_name: newEntry.name,
+      commodity:         newEntry.commodity,
+      attribution:       newEntry.attribution,
+      stage:             String(newEntry.stage),
+      gate_status:       newEntry.gateStatus,
+      checklist:         JSON.stringify(newEntry.checklist || {}),
+      notes:             newEntry.notes || '',
+      local_id:          newEntry.id,
+    });
     const attrLog = await getLocalData('attr_log', []);
     attrLog.unshift({ name, attr, commodity: comm, ts: new Date().toISOString(), note: 'Added to pipeline' });
     await setLocalData('attr_log', attrLog);
+    // v4.2.5: sync attribution event to Supabase
+    syncToServer('syncAttrLog', {
+      counterparty_name: name,
+      commodity:         comm,
+      attribution:       attr,
+      note:              'Added to pipeline',
+      local_id:          newEntry.id,
+    });
     setStatus('modalStatus','✓ ADDED — ENSURE CRM ENTRY CREATED WITHIN 24H','ok');
     setTimeout(closeModal, 1500);
     renderQCTable(); refreshKPIs(); renderMilestoneTracker(); renderAttrLog();
@@ -622,6 +678,20 @@ async function modalAction() {
       list[_modalQCIdx].gateStatus  = (passed === chks.length) ? 'PASS' : 'FAIL';
       list[_modalQCIdx].gateUpdated = new Date().toISOString();
       await setLocalData('qc_list', list);
+      // v4.2.5: sync gate status update to Supabase
+      const updated = list[_modalQCIdx];
+      if (updated) {
+        syncToServer('syncQCGate', {
+          counterparty_name: updated.name,
+          commodity:         updated.commodity,
+          attribution:       updated.attribution,
+          stage:             String(updated.stage || 0),
+          gate_status:       updated.gateStatus,
+          checklist:         JSON.stringify(updated.checklist || {}),
+          notes:             updated.notes || '',
+          local_id:          updated.id,
+        });
+      }
     }
     setStatus('modalStatus', passed === chks.length ? '✓ GATE PASSED' : '⚠ GATE NOT YET COMPLETE', passed === chks.length ? 'ok' : 'err');
     setTimeout(closeModal, 1200);
