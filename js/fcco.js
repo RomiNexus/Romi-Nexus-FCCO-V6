@@ -14,6 +14,9 @@
 //   [DIFC Notice] data processing notice shown at auth screen
 //   Modal show/hide via classList only (no style.display — CSP clean)
 // v4.2.5 — CRM SYNC: mirror writes to Supabase via Worker
+// FIX-16: sessionStorage and localStorage keys changed from 'rn_mario_*'
+//         to 'rn_fcco_*' to prevent session bleed with cofounder.js
+//         ('rn_cofounder_*') and fcco.js sharing the same browser.
 // ============================================================
 
 const API_URL = 'https://rominexus-gateway-v6.vacorp-inquiries.workers.dev';
@@ -107,9 +110,10 @@ async function decryptData(raw, def) {
   }
 }
 
+// FIX-16: Use 'rn_fcco_' prefix to avoid localStorage bleed
 async function getLocalData(key, def) {
   try {
-    const raw = localStorage.getItem('rn_mario_' + key);
+    const raw = localStorage.getItem('rn_fcco_' + key);
     if (!raw) return def;
     return await decryptData(raw, def);
   } catch(_) { return def; }
@@ -117,7 +121,7 @@ async function getLocalData(key, def) {
 async function setLocalData(key, val) {
   try {
     const enc = await encryptData(val);
-    localStorage.setItem('rn_mario_' + key, enc);
+    localStorage.setItem('rn_fcco_' + key, enc);
   } catch(_) {}
 }
 
@@ -151,7 +155,7 @@ async function purgeStaledData() {
 async function deleteAllData() {
   if (!confirm('DELETE ALL LOCAL DATA?\n\nThis will permanently erase all hours logs, counterparty records, and attribution data stored on this device.\n\nThis action cannot be undone.')) return;
   try {
-    ['hours_log','qc_list','attr_log'].forEach(k => localStorage.removeItem('rn_mario_' + k));
+    ['hours_log','qc_list','attr_log'].forEach(k => localStorage.removeItem('rn_fcco_' + k)); // FIX-16
     clearSession();
     alert('All local data deleted. You will now be logged out.');
     location.reload();
@@ -165,27 +169,30 @@ let _email = '';
 let _csrf  = '';
 let _name  = '';
 
+// FIX-16: Use 'rn_fcco_' prefix to avoid sessionStorage bleed
+const SESSION_PREFIX = 'rn_fcco_';
+
 function getSession() {
   try {
     return {
-      email: sessionStorage.getItem('rn_mario_email') || '',
-      csrf:  sessionStorage.getItem('rn_mario_csrf')  || '',
-      name:  sessionStorage.getItem('rn_mario_name')  || '',
+      email: sessionStorage.getItem(SESSION_PREFIX + 'email') || '',
+      csrf:  sessionStorage.getItem(SESSION_PREFIX + 'csrf')  || '',
+      name:  sessionStorage.getItem(SESSION_PREFIX + 'name')  || '',
     };
   } catch(_) { return {email:'',csrf:'',name:''}; }
 }
 function setSession(email, csrf, name) {
   try {
-    sessionStorage.setItem('rn_mario_email', email);
-    sessionStorage.setItem('rn_mario_csrf',  csrf);
-    sessionStorage.setItem('rn_mario_name',  name);
+    sessionStorage.setItem(SESSION_PREFIX + 'email', email);
+    sessionStorage.setItem(SESSION_PREFIX + 'csrf',  csrf);
+    sessionStorage.setItem(SESSION_PREFIX + 'name',  name);
   } catch(_) {}
 }
 function clearSession() {
   try {
-    sessionStorage.removeItem('rn_mario_email');
-    sessionStorage.removeItem('rn_mario_csrf');
-    sessionStorage.removeItem('rn_mario_name');
+    sessionStorage.removeItem(SESSION_PREFIX + 'email');
+    sessionStorage.removeItem(SESSION_PREFIX + 'csrf');
+    sessionStorage.removeItem(SESSION_PREFIX + 'name');
   } catch(_) {}
 }
 
